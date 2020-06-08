@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="model" default="$(find car_demo)/urdf/prius.urdf"/>
+  <arg name="rvizconfig" default="$(find car_demo)/rviz/demo.rviz" />
+  <arg name="world_name" default="$(find car_demo)/worlds/carolo.world" />
+  <arg name="gui" default="false" />
+  <arg name="initial_pose" default="-x -19.7 -y -6.66 -z 0.05 -Y -0.6090"/>
+
+  <param name="robot_description" textfile="$(arg model)"/>
+  <param name="spawn_pose" value="$(arg initial_pose)"/>
+
+  <include file="$(find gazebo_ros)/launch/empty_world.launch">
+    <arg name="verbose" value="true"/>
+    <arg name="gui" value="$(arg gui)"/>
+    <arg name="world_name" value="$(arg world_name)"/>
+  </include>
+
+  <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher"/>
+  <node pkg="fake_localization" type="fake_localization" name="fake_localization"/>
+  <node pkg="tf2_ros" type="static_transform_publisher" name="very_inaccurate_odom" args="0 0 0 0 0 0 odom base_link"/>
+  <node pkg="tf2_ros" type="static_transform_publisher" name="static_DIN70000" args="1.45 0 0 0 0 0 odom din70000"/>
+  <node pkg="car_demo" type="vehicle_control_gui" name="vehicle_control_gui"/>
+
+  <node name="spawn_urdf" pkg="gazebo_ros" type="spawn_model" args="-param robot_description -urdf $(arg initial_pose) -model prius"/>
+
+  <node name="map_server" pkg="map_server" type="map_server" args="$(find car_demo)/maps/track.yaml" required="true" />
+
+  <node name="rviz" pkg="rviz" type="rviz" args="-d $(arg rvizconfig)" required="true" />
+</launch>

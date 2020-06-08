@@ -1,0 +1,47 @@
+<?xml version="1.0"?>
+<sdf version="1.4">
+    <model name="carolo_track">
+        <static>true</static>
+        <link name="link">
+            <collision name="collision">
+                <geometry>
+                    <plane>
+                        <normal>0 0 1</normal>
+                        <size>90 90</size>
+                    </plane>
+                </geometry>
+                <surface>
+                    <friction>
+                    <ode>
+                        <mu>100</mu>
+                        <mu2>50</mu2>
+                    </ode>
+                    <torsional>
+                        <ode/>
+                    </torsional>
+                    </friction>
+                    <contact>
+                    <ode/>
+                    </contact>
+                    <bounce/>
+                </surface>                
+            </collision>
+            <visual name="visual">
+                <cast_shadows>false</cast_shadows>
+                <geometry>
+                    <plane>
+                        <normal>0 0 1</normal>
+                        <size>90 90</size>
+                    </plane>
+                </geometry>
+                <material>
+                    <script>
+                        <uri>model://carolo_track/materials/scripts</uri>
+                        <uri>model://carolo_track/materials/textures</uri>
+                        <name>Track/Image</name>
+                    </script>
+                </material>
+            </visual>
+        </link>
+    </model>
+</sdf>

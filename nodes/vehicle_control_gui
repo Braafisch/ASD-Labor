@@ -1,0 +1,167 @@
+#!/usr/bin/env python
+
+# This is a simple program to control the vehicle in the OSRF car demo.
+
+from Tkinter import *
+from threading import Lock
+import rospy
+from car_demo.msg import Control
+import std_msgs.msg
+import os
+
+
+class App:
+    def __init__(self, master):
+
+        self.pub = rospy.Publisher('prius', Control, queue_size=1)
+
+        self.mutex = Lock()
+
+        self.mutex.acquire()
+        self.steer = 0
+        self.throttle = 0
+        self.gear = int(Control.FORWARD)
+        self.gear2str = dict()
+
+        self.gear2str[Control.NO_COMMAND] = 'NO_COMMAND'
+        self.gear2str[Control.NEUTRAL] = 'NEUTRAL'
+        self.gear2str[Control.FORWARD] = 'FORWARD'
+        self.gear2str[Control.REVERSE] = 'REVERSE'
+        self.mutex.release()
+
+        frame = Frame(master)
+        frame.pack()
+        self.text = StringVar()
+        self.label = Label(frame, textvariable=self.text, height=2, width=30)
+        self.label.pack()
+        self.faster = Button(frame,
+                             text="+",
+                             command=self.inc_speed)
+        self.faster.pack(fill=X)
+        self.slower = Button(frame,
+                             text="-",
+                             command=self.dec_speed)
+        self.slower.pack(fill=X)
+        self.left = Button(frame,
+                           text="<<",
+                           command=self.inc_steer)
+        self.left.pack(fill=X)
+        self.right = Button(frame,
+                            text=">>",
+                            command=self.dec_steer)
+        self.right.pack(fill=X)
+        self.forward = Button(frame,
+                              text="Forward",
+                              command=self.set_gear_forward)
+        self.forward.pack(fill=X)
+        self.reverse = Button(frame,
+                              text="Reverse",
+                              command=self.set_gear_reverse)
+        self.reverse.pack(fill=X)
+        self.stop = Button(frame,
+                           text="Stop",
+                           command=self.set_stop)
+        self.stop.pack(fill=X)
+        self.respawn = Button(frame,
+                              text="Respawn",
+                              command=self.respawn_robot)
+        self.respawn.pack(fill=X)
+        self.quit = Button(frame,
+                           text="QUIT", fg="red",
+                           command=frame.quit)
+        self.quit.pack(fill=X)
+        self.update_text()
+
+    def update_text(self):
+        self.mutex.acquire()
+        self.text.set("throttle=%.1f, delta=%.1f\ngear=%s" %
+                      (self.throttle, self.steer, self.gear2str[self.gear]))
+        self.mutex.release()
+
+    def send_controls(self):
+        self.mutex.acquire()
+        _throttle, _steer, _gear = self.throttle, self.steer, self.gear
+        self.mutex.release()
+
+        command = Control()
+        command.header = std_msgs.msg.Header()
+        command.header.stamp = rospy.Time.now()
+        command.steer = _steer
+        command.shift_gears = _gear
+
+        if _throttle >= 0:
+            command.throttle = _throttle
+            command.brake = 0
+        else:
+            command.throttle = 0
+            command.brake = -_throttle
+
+        rospy.logdebug("vehicle_control_gui sending: %.1f, %.1f, %.1f, %d" %
+                       (command.throttle, command.brake, command.steer, command.shift_gears))
+        self.pub.publish(command)
+
+    def inc_speed(self):
+        self.mutex.acquire()
+        self.throttle = min([1.0, self.throttle+0.1])
+        self.mutex.release()
+        self.update_text()
+        self.send_controls()
+
+    def dec_speed(self):
+        self.mutex.acquire()
+        self.throttle = max([-1.0, self.throttle-0.1])
+        self.mutex.release()
+        self.update_text()
+        self.send_controls()
+
+    def inc_steer(self):
+        self.mutex.acquire()
+        self.steer = min([1.0, self.steer+0.1])
+        self.mutex.release()
+        self.update_text()
+        self.send_controls()
+
+    def dec_steer(self):
+        self.mutex.acquire()
+        self.steer = max([-1.0, self.steer-0.1])
+        self.mutex.release()
+        self.update_text()
+        self.send_controls()
+
+    def set_gear_forward(self):
+        self.mutex.acquire()
+        self.gear = Control.FORWARD
+        self.mutex.release()
+        self.update_text()
+        self.send_controls()
+
+    def set_gear_reverse(self):
+        self.mutex.acquire()
+        self.gear = Control.REVERSE
+        self.mutex.release()
+        self.update_text()
+        self.send_controls()
+
+    def set_stop(self):
+        self.mutex.acquire()
+        self.throttle = -0.5
+        self.steer = 0
+        self.mutex.release()
+        self.update_text()
+        self.send_controls()
+
+    def respawn_robot(self):
+        os.system("rosservice call gazebo/delete_model '{model_name: prius}'")
+        os.system("sleep 2")
+        spawn_pose = rospy.get_param("/spawn_pose")
+        os.system(
+            "rosrun gazebo_ros spawn_model -param robot_description -urdf %s -model prius" % spawn_pose)
+
+
+if __name__ == '__main__':
+    rospy.init_node('vehicle_control_gui')
+
+    root = Tk()
+    rospy.on_shutdown(root.quit)
+    app = App(root)
+    root.mainloop()

@@ -1,0 +1,33 @@
+<package format="2">
+  <name>car_demo</name>
+  <version>0.0.1</version>
+  <description>
+  The car demo
+  </description>
+  <maintainer email="tfoote@openrobotics.org">Tully Foote</maintainer>
+  <license>APACHE 2.0</license>
+  <buildtool_depend>catkin</buildtool_depend>
+  <build_depend>message_generation</build_depend>
+  
+  <depend>gazebo_ros</depend>
+  <depend>urdf</depend>
+
+  <depend>std_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>opencv2</depend>
+  <depend>cv_bridge</depend>
+  <depend>sensor_msgs</depend>
+  <depend>tf2_ros</depend>
+
+  <exec_depend>message_runtime</exec_depend>
+  <exec_depend>fake_localization</exec_depend>
+  <exec_depend>joy</exec_depend>
+  <exec_depend>robot_state_publisher</exec_depend>
+  <exec_depend>rospy</exec_depend>
+  <exec_depend>rviz</exec_depend>
+
+  <export>
+    <!-- Other tools can request additional information be placed here -->
+    <gazebo_ros plugin_path="${prefix}/lib" gazebo_media_path="${prefix}" gazebo_model_path="${prefix}/models"/>
+  </export>
+</package>

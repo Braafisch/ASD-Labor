@@ -1,0 +1,7 @@
+image: ../models/carolo_track/materials/textures/track.png
+resolution: 0.023809523809523808
+origin: [-45.0, -45.0, 0.0]
+occupied_thresh: 0.65
+free_thresh: 0.196
+negate: 0
+
