@@ -52,13 +52,7 @@ target_link_libraries(PriusHybridPlugin ${GAZEBO_LIBRARIES} ${IGNITION-MSGS_LIBR
 add_dependencies(PriusHybridPlugin ${catkin_EXPORTED_TARGETS})
 
 
-catkin_install_python(PROGRAMS nodes/joystick_translator
-                      DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 catkin_install_python(PROGRAMS nodes/vehicle_control_gui
-                      DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
-catkin_install_python(PROGRAMS nodes/lane_detection.py
-                      DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
-catkin_install_python(PROGRAMS nodes/lane_detection_loop
                       DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
 install(TARGETS PriusHybridPlugin
