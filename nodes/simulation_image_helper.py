@@ -1,12 +1,34 @@
 #!/usr/bin/env python
 # coding: utf-8
 
+"""Helper function for re-projecting image points to the road surface and vice versa.
+
+This module contains a class that can be used in the ASD lab gazebo simulation. 
+It provides functions for re-projecting image points onto the 3D ground plane 
+and projecting 3D points on the ground plane on to the image, bith using the known 
+homography between image and ground plane.
+
+Example:
+
+  foo = ClassFoo()
+  bar = foo.FunctionBar()
+"""
+
+from __future__ import print_function
 import numpy as np
 
 class SimulationImageHelper:
     """
     This class can be used to project points on the road surface onto the image and vice versa.
     It may be used for detecting lanes in simulation.
+
+    Attributes:
+        yHorizon: The y-coordinate of the horizon in the image
+
+    Methods:
+        image2road: project 2d image points to 3d road coords
+        road2image: project 3d road coords to 2d image points
+        distance2imagerow: return which y-coord in the image corresponds to a given distance on the 3d road plane
     """
 
     def __init__(self):
@@ -78,3 +100,17 @@ class SimulationImageHelper:
         """
         p = self.road2image(np.array([[distance, 0]]))
         return p[0, 1]
+
+
+if __name__ == "__main__":
+
+    imageHelper = SimulationImageHelper()
+    print('y-coordinate of horizon in the image: ', imageHelper.yHorizon)
+
+    box_road = np.array([[20, -5], [20, +5], [5, +5], [5, -5]])
+    box_image = imageHelper.road2image(box_road)
+    box_road_reproject = imageHelper.image2road(box_image)
+
+    print('3d road coords: ', box_road)
+    print('2d image coords: ', box_image)
+    print('reprojected 3d road coords: ', box_road_reproject)
