@@ -8,6 +8,7 @@ import rospy
 from car_demo.msg import Control
 import std_msgs.msg
 import os
+import time
 
 
 class App:
@@ -144,11 +145,20 @@ class App:
 
     def set_stop(self):
         self.mutex.acquire()
-        self.throttle = -0.5
+        self.gear = Control.FORWARD
+        self.throttle = -1.0
         self.steer = 0
         self.mutex.release()
         self.update_text()
         self.send_controls()
+
+        time.sleep(1.0)
+
+        self.mutex.acquire()
+        self.gear = Control.NEUTRAL
+        self.mutex.release()
+        self.update_text()
+        self.send_controls()        
 
     def respawn_robot(self):
         os.system("rosservice call gazebo/delete_model '{model_name: prius}'")
