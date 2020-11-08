@@ -29,6 +29,7 @@ add_message_files(
   Trajectory.msg
   ControlDebug.msg
   Objects.msg
+  TrafficLightStatus.msg
 )
 
 generate_messages(
