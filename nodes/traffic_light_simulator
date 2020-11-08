@@ -2,6 +2,7 @@
 
 """
 This ROS node simulates a traffic light (with random initial state) and publishes a "TrafficLightStatus" message.
+You can also add the topic "traffic_light_visu" in rviz to display the traffic light.
 
 To view the state machine, you may use "rosrun smach_viewer smach_viewer.py", but you need to install corresponding 
 libraries first using:
@@ -15,8 +16,10 @@ from smach_ros import IntrospectionServer
 import tf
 import random
 import numpy as np
+from visualization_msgs.msg import Marker
+from visualization_msgs.msg import MarkerArray
+from std_msgs.msg import ColorRGBA
 from car_demo.msg import TrafficLightStatus
-
 
 
 def distPoint2LineSegment(veh_x, veh_y, veh_phi, x1, y1, x2, y2): 
@@ -45,16 +48,82 @@ def distPoint2LineSegment(veh_x, veh_y, veh_phi, x1, y1, x2, y2):
     return (dist, dphi)
 
 
+def getTrafficLightVisualization(x, y, header, color):
+    
+    markerArray = MarkerArray()
+    header.frame_id = '/map' 
+
+    # red
+    marker = Marker()
+    marker.header = header
+    marker.type = marker.SPHERE
+    marker.id = 1
+    marker.action = marker.ADD
+    marker.scale.x = 0.2
+    marker.scale.y = 0.2
+    marker.scale.z = 0.2
+    if color in ['RED', 'RED_YELLOW']:
+        marker.color = ColorRGBA(1, 0, 0, 1)
+    else:
+        marker.color = ColorRGBA(0.3, 0, 0, 1)       
+    marker.pose.orientation.w = 1.0
+    marker.pose.position.x = x
+    marker.pose.position.y = y 
+    marker.pose.position.z = 2.5
+    markerArray.markers.append(marker)     
+ 
+    # yellow
+    marker = Marker()
+    marker.header = header
+    marker.type = marker.SPHERE
+    marker.id = 2
+    marker.action = marker.ADD
+    marker.scale.x = 0.2
+    marker.scale.y = 0.2
+    marker.scale.z = 0.2
+    if color in ['YELLOW', 'RED_YELLOW']:
+        marker.color = ColorRGBA(1, 1, 0, 1)
+    else:
+        marker.color = ColorRGBA(0.3, 0.3, 0, 1)       
+    marker.pose.orientation.w = 1.0
+    marker.pose.position.x = x
+    marker.pose.position.y = y 
+    marker.pose.position.z = 2.25 
+    markerArray.markers.append(marker)
+
+    # green
+    marker = Marker()
+    marker.header = header
+    marker.type = marker.SPHERE
+    marker.id = 3
+    marker.action = marker.ADD
+    marker.scale.x = 0.2
+    marker.scale.y = 0.2
+    marker.scale.z = 0.2
+    if color in ['GREEN']:
+        marker.color = ColorRGBA(0, 1, 0, 1)
+    else:
+        marker.color = ColorRGBA(0, 0.3, 0, 1) 
+    marker.pose.orientation.w = 1.0
+    marker.pose.position.x = x
+    marker.pose.position.y = y 
+    marker.pose.position.z = 2.0 
+    markerArray.markers.append(marker)
+
+    return markerArray
+ 
+
 # define general traffic light state handler
 class TrafficLightState(smach.State):
-    def __init__(self, tf_listener, tl_publisher, color='GREEN', duration_s=10, rate_hz=10):
+    def __init__(self, tf_listener, tl_publisher, tlvis_publisher, color='GREEN', duration_s=10, rate_hz=10):
         smach.State.__init__(self, outcomes=['ellapsed', 'aborted'])
         self.rate_hz = rate_hz
         self.duration_s = duration_s
         self.color = color
         self.tf_listener = tf_listener
         self.tl_publisher = tl_publisher
-        self.stopline = (35.6, -0.1, 32.8, -2.2)
+        self.tlvis_publisher = tlvis_publisher
+        self.stopline = (35.6, -0.1, 29.7, -4.6)
         self.dist2bumper = 2.75
         
     def execute(self, userdata):
@@ -93,10 +162,15 @@ class TrafficLightState(smach.State):
                            'YELLOW': tl_status.YELLOW, 
                            'RED': tl_status.RED, 
                            'RED_YELLOW': tl_status.RED_YELLOW }
+            tl_status.header.stamp = rospy.get_rostime()
             tl_status.dist_m = dist
             tl_status.heading_rad = dphi
             tl_status.state = state_dict[self.color]
             self.tl_publisher.publish(tl_status)
+
+            # publish traffic light visualization
+            tl_visualization = getTrafficLightVisualization(x1, y1, tl_status.header, self.color)
+            self.tlvis_publisher.publish(tl_visualization)
 
             r.sleep()
 
@@ -112,8 +186,9 @@ def main():
     # For retrieving vehicle pose
     listener = tf.TransformListener()
 
-    # For publishing the traffic lilght status
-    publisher = rospy.Publisher("traffic_light_status", TrafficLightStatus, queue_size=1)
+    # For publishing the traffic lilght status and visualization
+    status_publisher = rospy.Publisher("traffic_light_status", TrafficLightStatus, queue_size=1)
+    visu_publisher = rospy.Publisher("traffic_light_visu", MarkerArray, queue_size=1)
 
     # Create a SMACH state machine
     sm = smach.StateMachine(outcomes=['ellapsed', 'aborted'])
@@ -122,16 +197,20 @@ def main():
     with sm:
         # Add states to the container
         smach.StateMachine.add('GREEN', 
-                               TrafficLightState(color='GREEN', duration_s=5, tf_listener=listener, tl_publisher=publisher), 
+                               TrafficLightState(color='GREEN', duration_s=5, 
+                                                 tf_listener=listener, tl_publisher=status_publisher, tlvis_publisher=visu_publisher), 
                                transitions={'ellapsed': 'YELLOW'})
         smach.StateMachine.add('YELLOW', 
-                               TrafficLightState(color='YELLOW', duration_s=3, tf_listener=listener, tl_publisher=publisher), 
+                               TrafficLightState(color='YELLOW', duration_s=3, 
+                                                 tf_listener=listener, tl_publisher=status_publisher, tlvis_publisher=visu_publisher), 
                                transitions={'ellapsed': 'RED'})
         smach.StateMachine.add('RED', 
-                               TrafficLightState(color='RED', duration_s=5, tf_listener=listener, tl_publisher=publisher), 
+                               TrafficLightState(color='RED', duration_s=5, 
+                                                 tf_listener=listener, tl_publisher=status_publisher, tlvis_publisher=visu_publisher), 
                                transitions={'ellapsed': 'RED_YELLOW'})
         smach.StateMachine.add('RED_YELLOW', 
-                               TrafficLightState(color='RED_YELLOW', duration_s=3, tf_listener=listener, tl_publisher=publisher), 
+                               TrafficLightState(color='RED_YELLOW', duration_s=3, 
+                                                 tf_listener=listener, tl_publisher=status_publisher, tlvis_publisher=visu_publisher), 
                                transitions={'ellapsed': 'GREEN'})
 
     # Set random initial state

@@ -27,7 +27,7 @@ Panels:
     Experimental: false
     Name: Time
     SyncMode: 0
-    SyncSource: front_camera
+    SyncSource: center_laser
 Preferences:
   PromptSaveOnExit: true
 Toolbars:
@@ -148,7 +148,7 @@ Visualization Manager:
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
-        Max Value: -0.007162034511566162
+        Max Value: -0.0071620941162109375
         Min Value: -0.3170180320739746
         Value: true
       Axis: Z
@@ -250,6 +250,14 @@ Visualization Manager:
       Transport Hint: raw
       Unreliable: false
       Value: true
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Marker Topic: /traffic_light_visu
+      Name: MarkerArray
+      Namespaces:
+        "": true
+      Queue Size: 100
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -293,10 +301,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.30102622509002686
+      Pitch: 0.2310262769460678
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 1.643040657043457
+      Yaw: 1.6480406522750854
     Saved: ~
 Window Geometry:
   Displays:
