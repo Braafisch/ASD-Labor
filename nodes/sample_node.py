@@ -5,13 +5,14 @@ This is a sample node for the ASD lab.
 It will:
 * obtain the vehicles speed and position 
 * drive the vehicle 
+* receive and print traffic light state
 * publish a debug image  
 """
 
 from __future__ import print_function
 import rospy
 import tf
-from car_demo.msg import Control, Trajectory, ControlDebug
+from car_demo.msg import Control, Trajectory, ControlDebug, TrafficLightStatus
 import numpy as np
 from sensor_msgs.msg import JointState, Image
 import message_filters
@@ -60,12 +61,29 @@ class ImageHandler:
             rospy.logerr(e)
 
 
+class TrafficLightHandler:
+    """
+    A class to subscribe to traffic light status and print received data.
+    """
+    def __init__(self):
+        # subscribe to traffic light status
+        self.trafficLightSub = rospy.Subscriber("traffic_light_status", TrafficLightStatus, self.callback, queue_size=1)
+
+    def callback(self, message):
+        state_dict = { message.GREEN: 'GREEN', 
+                       message.YELLOW: 'YELLOW', 
+                       message.RED: 'RED', 
+                       message.RED_YELLOW: 'RED_YELLOW' }
+        rospy.loginfo("traffic light: state=%s, dist=%.1fm, dphi=%.1fdeg" 
+                      % (state_dict[message.state], message.dist_m, message.heading_rad*180.0/np.pi))
+
+
 if __name__ == '__main__':
     rospy.init_node('sample_node')
     rate = rospy.Rate(10.0)
 
     # subscribers
-    listener = tf.TransformListener()
+    tf_listener = tf.TransformListener()    
     jointStateSub = message_filters.Subscriber("joint_states", JointState)
     jointStateCache = message_filters.Cache(jointStateSub, 100)
     
@@ -75,6 +93,9 @@ if __name__ == '__main__':
     # setup image handler
     imageHandler = ImageHandler()
     
+    # setup traffic light handler
+    tlHandler = TrafficLightHandler()
+
     # main loop
     time_start = rospy.Time(0)
     while not rospy.is_shutdown():
@@ -84,9 +105,10 @@ if __name__ == '__main__':
 
         # get vehicle position data 
         try:
-            (trans, rot) = listener.lookupTransform('/map', '/din70000', rospy.Time(0)) # get latest trafo between world and vehicle
+            (trans, rot) = tf_listener.lookupTransform('/map', '/din70000', rospy.Time(0)) # get latest trafo between world and vehicle
             rpy = tf.transformations.euler_from_quaternion(rot)
-            rospy.loginfo("pos: T=%s, rpy=%s" % (str(trans), str(rpy)) )
+            rospy.loginfo("pos: T=[%.1f, %.1f, %.1f], rpy=[%.1f, %.1f, %.1f]" % 
+                          (trans[0], trans[1], trans[2], rpy[0], rpy[1], rpy[2]))
         except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
             rospy.loginfo("Could not receive position information!")
             rate.sleep()

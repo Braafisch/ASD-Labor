@@ -148,8 +148,8 @@ Visualization Manager:
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
-        Max Value: -0.0071620941162109375
-        Min Value: -0.3170180320739746
+        Max Value: -0.007162034511566162
+        Min Value: -0.31701815128326416
         Value: true
       Axis: Z
       Channel Name: intensity
@@ -257,6 +257,15 @@ Visualization Manager:
       Namespaces:
         "": true
       Queue Size: 100
+      Value: true
+    - Class: rviz/InteractiveMarkers
+      Enable Transparency: true
+      Enabled: true
+      Name: InteractiveMarkers
+      Show Axes: false
+      Show Descriptions: true
+      Show Visual Aids: false
+      Update Topic: /traffic_light_simulator/update
       Value: true
   Enabled: true
   Global Options:

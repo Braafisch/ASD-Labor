@@ -5,8 +5,11 @@ This repository has been forked from https://github.com/osrf/car_demo.
 
 To run this
 * install ros-desktop-full and gazebo
-* install fake localization and map server: 
+* install fake localization, map server, and smach tools:
+    * `sudo apt update`
+    * `sudo apt upgrade`
     * `sudo apt install ros-melodic-fake-localization ros-melodic-map-server`
+    * `sudo apt install ros-melodic-smach ros-melodic-smach-ros ros-melodic-smach-msgs ros-melodic-smach-viewer python-gtk2` 
 * create a workspace, e.g. `mkdir -p catkin_ws/src` 
 * clone this repo into `catkin_ws/src`
 * run `catkin_make` 
