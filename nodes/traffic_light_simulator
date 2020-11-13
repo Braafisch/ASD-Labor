@@ -26,28 +26,40 @@ from traffic_light_simulator_visu import getTrafficLightVisualization, TrafficLi
 # global instance of traffic light gui
 tl_gui = TrafficLightInteractionGui()
 
+# stop line coordinates: (xRight, yRight, xLeft, yLeft)
+STOP_LINE = (35.6, -0.1, 29.7, -4.6)
 
-def distPoint2LineSegment(veh_x, veh_y, veh_phi, x1, y1, x2, y2): 
+# max distance for valid stop lines
+MAX_STOP_LINE_DIST = 25
+
+
+def distPoint2LineSegment(veh_x, veh_y, veh_phi, xr, yr, xl, yl): 
     """
     Find the closest point from vehicle pose (veh_x, veh_y, veh_phi) 
-    to a line segment (x1, y1, x2, y2).
+    to a line segment (xr, yr, xl, yl).
     This code is adapted from: 
     https://stackoverflow.com/questions/849211/shortest-distance-between-a-point-and-a-line-segment
     """
-    px = x2-x1
-    py = y2-y1
+    px = xl-xr
+    py = yl-yr
     norm = px*px + py*py
 
-    u = ((veh_x - x1)*px + (veh_y - y1)*py) / float(norm)
+    u = ((veh_x - xr)*px + (veh_y - yr)*py) / float(norm)
     u = np.clip(u, 0, 1)
 
-    x = x1 + u*px
-    y = y1 + u*py
+    x = xr + u*px
+    y = yr + u*py
 
     dx = x - veh_x
     dy = y - veh_y
     dist = np.hypot(dx, dy)
-    dphi = np.arctan2(dy, dx) - veh_phi
+
+    # normal in driving direction
+    nx, ny = py, -px
+    if dx*nx + dy*ny < 0:
+        dist = -dist # we passed the stop line already
+
+    dphi = veh_phi - np.arctan2(ny, nx)
     dphi = (dphi + np.pi) % (2*np.pi) - np.pi # normalize to -pi..pi
 
     return (dist, dphi)
@@ -63,7 +75,7 @@ class TrafficLightState(smach.State):
         self.tf_listener = tf_listener
         self.tl_publisher = tl_publisher
         self.tlvis_publisher = tlvis_publisher
-        self.stopline = (35.6, -0.1, 29.7, -4.6)
+        self.stopline = STOP_LINE # NOTE: the order is important here (xRight, yRight, xLeft, yLeft)
         self.dist2bumper = 2.75
         
     def execute(self, userdata):
@@ -96,7 +108,7 @@ class TrafficLightState(smach.State):
             dx, dy = self.dist2bumper*np.cos(rpy[2]), self.dist2bumper*np.sin(rpy[2])
             dist, dphi = distPoint2LineSegment(trans[0]+dx, trans[1]+dy, rpy[2], 
                                                x1, y1, x2, y2)
-            rospy.logdebug("dist=%.1f, dphi_deg=%.1f" % (dist, dphi*180.0/np.pi))
+            rospy.loginfo("dist=%.1f, dphi_deg=%.1f" % (dist, dphi*180.0/np.pi))
 
             # publish current traffic light status
             tl_status = TrafficLightStatus()
@@ -106,7 +118,12 @@ class TrafficLightState(smach.State):
                            'RED_YELLOW': tl_status.RED_YELLOW }
             tl_status.header.stamp = rospy.get_rostime()
             tl_status.dist_m = dist
-            tl_status.heading_rad = dphi
+            tl_status.dphi_rad = dphi
+
+            if np.abs(tl_status.dist_m) > MAX_STOP_LINE_DIST: # traffic light too far away
+                tl_status.dist_m = tl_status.INVALID
+                tl_status.dphi_rad = tl_status.INVALID
+
             tl_status.state = state_dict[self.color]
             self.tl_publisher.publish(tl_status)
 
@@ -164,7 +181,7 @@ def main():
     sis.start()
 
     # prepare traffic light gui
-    tl_gui.initInteractionServer(35.6, -0.1)
+    tl_gui.initInteractionServer(STOP_LINE[0], STOP_LINE[1])
 
     # Execute SMACH plan
     sm.execute()

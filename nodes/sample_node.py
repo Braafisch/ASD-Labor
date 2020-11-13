@@ -75,7 +75,7 @@ class TrafficLightHandler:
                        message.RED: 'RED', 
                        message.RED_YELLOW: 'RED_YELLOW' }
         rospy.loginfo("traffic light: state=%s, dist=%.1fm, dphi=%.1fdeg" 
-                      % (state_dict[message.state], message.dist_m, message.heading_rad*180.0/np.pi))
+                      % (state_dict[message.state], message.dist_m, message.dphi_rad*180.0/np.pi))
 
 
 if __name__ == '__main__':
