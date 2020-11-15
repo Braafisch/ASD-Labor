@@ -174,7 +174,8 @@ def main():
 
     # Set random initial state
     state_list = ['GREEN', 'YELLOW', 'RED', 'RED_YELLOW']
-    sm.set_initial_state([random.choice(state_list)])
+    #sm.set_initial_state([random.choice(state_list)])
+    sm.set_initial_state(['RED'])
 
     # For debugging and visualisation of state machine
     sis = IntrospectionServer('server_name', sm, '/SM_ROOT')

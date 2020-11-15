@@ -20,6 +20,7 @@ To run this
 
 Some helpful vehicle parameters:
 * L=2.7: [m] Wheel base of vehicle
-* veh_dim_x, veh_dim_y= 4.645, 1.76]: [m] size of vehicle (length, width)
+* veh_dim_x, veh_dim_y= 4.645, 1.76: [m] size of vehicle (length, width)
+* r=0.31265: [m] Wheel radius 
 
 (Thao Dang, HS Esslingen)

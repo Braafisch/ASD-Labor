@@ -117,11 +117,12 @@ if __name__ == '__main__':
         # get vehicle joint data
         joint_state = jointStateCache.getElemBeforeTime(time_now)
         joint_state_dict = dict(zip(joint_state.name, joint_state.velocity))
+        r_wheel = 0.31265
         v_kmh = 0.25*(joint_state_dict['front_right_wheel_joint'] + \
             joint_state_dict['rear_left_wheel_joint'] + \
             joint_state_dict['front_left_wheel_joint'] + \
-            joint_state_dict['rear_right_wheel_joint'])
-        rospy.loginfo("v_kmh = " + str(v_kmh))
+            joint_state_dict['rear_right_wheel_joint']) * r_wheel * 3.6
+        rospy.loginfo("v_kmh = " + str(v_kmh)) 
 
         # accelerate for 5s, keep speed for 5s, then stop
         dt_sec = time_now.to_sec()-time_start.to_sec()

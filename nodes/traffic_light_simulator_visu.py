@@ -92,7 +92,7 @@ class TrafficLightInteractionGui:
         self.server = None
         self.menu_handler = MenuHandler()
         self.event_counter = 0
-        self.automatic = True        
+        self.automatic = False        
 
     def cbEmpty(self, feedback):
         pass
