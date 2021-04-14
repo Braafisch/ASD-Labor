@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # coding: utf-8
 
 """Helper function for re-projecting image points to the road surface and vice versa.
@@ -14,7 +14,6 @@ Example:
   bar = foo.FunctionBar()
 """
 
-from __future__ import print_function
 import numpy as np
 
 class SimulationImageHelper:

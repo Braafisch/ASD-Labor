@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """
 This ROS node simulates a traffic light (with random initial state) and publishes a "TrafficLightStatus" message.
@@ -7,7 +7,7 @@ You can also add the topic "traffic_light_visu" in rviz to display the traffic l
 To view the state machine, you may use "rosrun smach_viewer smach_viewer.py", but you need to install corresponding 
 libraries first using:
 
-sudo apt install ros-melodic-smach ros-melodic-smach-ros ros-melodic-smach-msgs ros-melodic-smach-viewer python-gtk2
+sudo apt install ros-noetic-smach ros-melodic-smach-ros ros-noetic-smach-msgs ros-noetic-smach-viewer python-gtk2
 """
 
 import rospy
@@ -20,11 +20,11 @@ from visualization_msgs.msg import Marker
 from visualization_msgs.msg import MarkerArray
 
 from car_demo.msg import TrafficLightStatus
-from traffic_light_simulator_visu import getTrafficLightVisualization, TrafficLightInteractionGui
+from traffic_light_simulator_visu import getTrafficLightVisualization, TrafficLightControlReceiver
 
 
-# global instance of traffic light gui
-tl_gui = TrafficLightInteractionGui()
+# global instance of traffic light interaction
+tl_control = TrafficLightControlReceiver()
 
 # stop line coordinates: (xRight, yRight, xLeft, yLeft)
 STOP_LINE = (35.6, -0.1, 29.7, -4.6)
@@ -82,12 +82,12 @@ class TrafficLightState(smach.State):
         t_start = rospy.get_time()        
         r = rospy.Rate(self.rate_hz)
         x1, y1, x2, y2 = self.stopline
-        curr_cnt = tl_gui.event_counter
+        curr_cnt = tl_control.event_counter
 
         rospy.logout('Entering state %s.' % (self.color))
 
-        while ((tl_gui.automatic) and (rospy.get_time()-t_start < self.duration_s)) or \
-            ((not tl_gui.automatic) and (tl_gui.event_counter==curr_cnt)):
+        while ((tl_control.automatic) and (rospy.get_time()-t_start < self.duration_s)) or \
+            ((not tl_control.automatic) and (tl_control.event_counter==curr_cnt)):
 
             # check if rospy has been terminated 
             if rospy.is_shutdown():
@@ -96,14 +96,14 @@ class TrafficLightState(smach.State):
 
             # get vehicle position data 
             try:
-                (trans, rot) = self.tf_listener.lookupTransform('/map', '/din70000', rospy.Time(0)) # get latest trafo between world and vehicle
+                (trans, rot) = self.tf_listener.lookupTransform('map', 'din70000', rospy.Time(0)) # get latest trafo between world and vehicle
                 rpy = tf.transformations.euler_from_quaternion(rot)
                 rospy.logdebug("pos: T=%s, rpy=%s" % (str(trans), str(rpy)) )
             except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
                 rospy.logwarn("Could not receive position information!")
                 r.sleep()
                 continue
-
+            
             # compute relative pose to stop line
             dx, dy = self.dist2bumper*np.cos(rpy[2]), self.dist2bumper*np.sin(rpy[2])
             dist, dphi = distPoint2LineSegment(trans[0]+dx, trans[1]+dy, rpy[2], 
@@ -145,6 +145,9 @@ def main():
     # For retrieving vehicle pose
     listener = tf.TransformListener()
 
+    # For retrieving traffic light control commands
+    tl_control.initialize()
+
     # For publishing the traffic lilght status and visualization
     status_publisher = rospy.Publisher("traffic_light_status", TrafficLightStatus, queue_size=1)
     visu_publisher = rospy.Publisher("traffic_light_visu", MarkerArray, queue_size=1)
@@ -173,16 +176,13 @@ def main():
                                transitions={'ellapsed': 'GREEN'})
 
     # Set random initial state
-    state_list = ['GREEN', 'YELLOW', 'RED', 'RED_YELLOW']
+    #state_list = ['GREEN', 'YELLOW', 'RED', 'RED_YELLOW']
     #sm.set_initial_state([random.choice(state_list)])
     sm.set_initial_state(['RED'])
 
     # For debugging and visualisation of state machine
     sis = IntrospectionServer('server_name', sm, '/SM_ROOT')
     sis.start()
-
-    # prepare traffic light gui
-    tl_gui.initInteractionServer(STOP_LINE[0], STOP_LINE[1])
 
     # Execute SMACH plan
     sm.execute()

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """
 Helper functions for traffic light visualization and GUI, cf. traffic light simulator.
@@ -7,17 +7,16 @@ Helper functions for traffic light visualization and GUI, cf. traffic light simu
 import rospy
 import copy
 import numpy as np
-from interactive_markers.interactive_marker_server import *
-from interactive_markers.menu_handler import *
 from visualization_msgs.msg import *
 from geometry_msgs.msg import Point
 from std_msgs.msg import ColorRGBA
+from car_demo.msg import TrafficLightControl
 
 
 def getTrafficLightVisualization(x, y, header, color):
     
     markerArray = MarkerArray()
-    header.frame_id = '/map' 
+    header.frame_id = 'map' 
 
     # red
     marker = Marker()
@@ -79,70 +78,23 @@ def getTrafficLightVisualization(x, y, header, color):
     return markerArray
 
 
-class TrafficLightInteractionGui:
+class TrafficLightControlReceiver:
     """
-    This class allows setting the next phase of the traffic light via a context menu.
-    Two attributes of this class can be set:
+    This class allows receiving the next phase of the traffic light via ros messages.
+    Two attributes of this class are available:
     * automatic: True if phase shall be adjusted based on ellabpsed time
     * event_counter: whenever "Next Phase" is selected from the context menu, this 
         counter is increased by one
     """
 
     def __init__(self):
-        self.server = None
-        self.menu_handler = MenuHandler()
+        self.automatic = False
         self.event_counter = 0
-        self.automatic = False        
 
-    def cbEmpty(self, feedback):
-        pass
+    def initialize(self):
+        self.sub = rospy.Subscriber('traffic_light_control', TrafficLightControl,
+                                    self.callbackTLControl, queue_size=1)
 
-    def makeMenuMarker(self, x, y):
-        int_marker = InteractiveMarker()
-        int_marker.header.frame_id = "map"        
-        int_marker.pose.position = Point(x, y, 2.25)
-        int_marker.scale = 1
-        int_marker.name = "context_menu"
-        int_marker.description = ""
-
-        # make one control using default visuals
-        control = InteractiveMarkerControl()
-        control.interaction_mode = InteractiveMarkerControl.MENU
-        control.description = "traffic light\n(right click\nto modify)"
-        control.name = "menu_only_control"
-        int_marker.controls.append(copy.deepcopy(control))
-
-        # make one control showing a box
-        marker = Marker()
-        marker.type = Marker.CYLINDER
-        marker.scale.x = 0.5
-        marker.scale.y = 0.5
-        marker.scale.z = 1.0
-        marker.color.r = 0.5
-        marker.color.g = 0.5
-        marker.color.b = 0.5
-        marker.color.a = 0.1
-
-        control.markers.append(marker)
-        control.always_visible = True
-        int_marker.controls.append(control)
-
-        self.server.insert(int_marker, self.cbEmpty)
-        self.menu_handler.apply(self.server, int_marker.name)   
-
-    def cbAutomatic(self, feedback):
-        self.automatic = True
-        rospy.loginfo('Set traffic light phase transition to automatic.')
-
-    def cbNext(self, feedback):
-        self.event_counter += 1
-        self.automatic = False        
-        rospy.loginfo('Received traffic light state next event trigger (cnt=%d).' % self.event_counter)
-
-    def initInteractionServer(self, x, y, node_name='traffic_light_simulator'):
-        self.server = InteractiveMarkerServer(node_name)
-        self.menu_handler.insert("Next phase", callback=self.cbNext)
-        self.menu_handler.insert("Automatic", callback=self.cbAutomatic)
-        self.makeMenuMarker(x, y)
-        self.server.applyChanges()
-       
+    def callbackTLControl(self, msg):
+        self.automatic = msg.automatic
+        self.event_counter = msg.event_counter

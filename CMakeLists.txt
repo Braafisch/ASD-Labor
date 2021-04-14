@@ -1,5 +1,8 @@
-cmake_minimum_required(VERSION 2.8.3)
+cmake_minimum_required(VERSION 3.0.2)
 project(car_demo)
+
+## Compile as C++11, supported in ROS Kinetic and newer
+# add_compile_options(-std=c++11)
 
 set (PRIUSCUP_MAJOR_VERSION 0)
 set (PRIUSCUP_MINOR_VERSION 1)
@@ -18,8 +21,8 @@ find_package(catkin REQUIRED COMPONENTS
   rospy
 )
 
-find_package(gazebo 9 REQUIRED)
-find_package(ignition-msgs1 REQUIRED)
+find_package(gazebo 11 REQUIRED)
+find_package(ignition-msgs5 REQUIRED)
 find_package(OpenCV REQUIRED)
 
 add_message_files(
@@ -30,6 +33,7 @@ add_message_files(
   ControlDebug.msg
   Objects.msg
   TrafficLightStatus.msg
+  TrafficLightControl.msg
 )
 
 generate_messages(
@@ -41,7 +45,7 @@ generate_messages(
 
 catkin_package(
  # INCLUDE_DIRS include
- # LIBRARIES gazebo_radar_plugin
+ # LIBRARIES car_demo
  CATKIN_DEPENDS gazebo_ros message_runtime std_msgs
 #  DEPENDS system_lib
 )
@@ -52,8 +56,7 @@ add_library(PriusHybridPlugin SHARED plugins/PriusHybridPlugin.cc)
 target_link_libraries(PriusHybridPlugin ${GAZEBO_LIBRARIES} ${IGNITION-MSGS_LIBRARIES})
 add_dependencies(PriusHybridPlugin ${catkin_EXPORTED_TARGETS})
 
-
-catkin_install_python(PROGRAMS nodes/vehicle_control_gui
+catkin_install_python(PROGRAMS nodes/vehicle_control_gui 
                       DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
 install(TARGETS PriusHybridPlugin

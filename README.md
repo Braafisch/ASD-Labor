@@ -4,12 +4,12 @@ A simple example for running a vehicle simulation in Gazebo.
 This repository has been forked from https://github.com/osrf/car_demo.
 
 To run this
-* install ros-desktop-full and gazebo
+* install ros-desktop-full and gazebo or even better: download vmware image from https://bwsyncandshare.kit.edu/s/4bo6XdJ6eYGnxMb 
 * install fake localization, map server, and smach tools:
     * `sudo apt update`
-    * `sudo apt upgrade`
-    * `sudo apt install ros-melodic-fake-localization ros-melodic-map-server`
-    * `sudo apt install ros-melodic-smach ros-melodic-smach-ros ros-melodic-smach-msgs ros-melodic-smach-viewer python-gtk2` 
+    * `sudo apt install ros-noetic-fake-localization ros-noetic-map-server`
+    * `sudo apt install ros-noetic-smach ros-noetic-smach-ros ros-noetic-smach-msgs ros-noetic-smach-viewer python-gtk2`
+    * `sudo apt install ros-noetic-joy python3-tk libignition-msgs-dev` 
 * create a workspace, e.g. `mkdir -p catkin_ws/src` 
 * clone this repo into `catkin_ws/src`
 * run `catkin_make` 

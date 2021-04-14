@@ -1,21 +1,58 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # This is a simple program to control the vehicle in the OSRF car demo.
 
-from Tkinter import *
+from tkinter import *
 from threading import Lock
 import rospy
-from car_demo.msg import Control
+from car_demo.msg import Control, TrafficLightControl
 import std_msgs.msg
 import os
 import time
+
+
+class TrafficLightControlSender:
+    """
+    This class allows setting the next phase of the traffic light via ros messages.
+    Two attributes of this class are available:
+    * automatic: True if phase shall be adjusted based on ellabpsed time
+    * event_counter: whenever "Next Phase" is selected from the context menu, this 
+        counter is increased by one
+    """
+
+    def __init__(self):
+        self.automatic = False
+        self.event_counter = 0
+        self.pub = rospy.Publisher('traffic_light_control', TrafficLightControl, queue_size=1)  
+
+    def sendControlMessage(self):
+        command = TrafficLightControl()
+        command.header = std_msgs.msg.Header()
+        command.header.stamp = rospy.Time.now() 
+        command.automatic = self.automatic
+        command.event_counter = self.event_counter
+        rospy.logdebug("TrafficLightInteraction sending: %d, %d" %
+                        (command.automatic, command.event_counter))
+        self.pub.publish(command)
+
+    def setNextPhase(self):
+        self.automatic = False
+        self.event_counter = self.event_counter+1
+        if self.event_counter>100:
+            self.event_counter = 0
+        self.sendControlMessage()
+
+    def setAutomatic(self):
+        self.automatic = True
+        self.event_counter = 0
+        self.sendControlMessage()
 
 
 class App:
     def __init__(self, master):
 
         self.pub = rospy.Publisher('prius', Control, queue_size=1)
-
+        self.traffic_light_control = TrafficLightControlSender()
         self.mutex = Lock()
 
         self.mutex.acquire()
@@ -51,6 +88,8 @@ class App:
                             text=">>",
                             command=self.dec_steer)
         self.right.pack(fill=X)
+        self.gearLabel = Label(frame, text="Gear:", height=1, width=30, anchor=W)
+        self.gearLabel.pack()
         self.forward = Button(frame,
                               text="Forward",
                               command=self.set_gear_forward)
@@ -66,6 +105,18 @@ class App:
         self.respawn = Button(frame,
                               text="Respawn",
                               command=self.respawn_robot)
+        self.tlLabel = Label(frame, text="Traffic light:", height=1, width=30, anchor=W)
+        self.tlLabel.pack()
+        self.nextPhase = Button(frame,
+                                text="Next phase",
+                                command=self.set_tl_next)
+        self.nextPhase.pack(fill=X)        
+        self.autoPhase = Button(frame,
+                                text="Automatic",
+                                command=self.set_tl_auto)
+        self.autoPhase.pack(fill=X)        
+        self.resetLabel = Label(frame, text="Reset:", height=1, width=30, anchor=W)
+        self.resetLabel.pack()
         self.respawn.pack(fill=X)
         self.quit = Button(frame,
                            text="QUIT", fg="red",
@@ -166,6 +217,14 @@ class App:
         spawn_pose = rospy.get_param("/spawn_pose")
         os.system(
             "rosrun gazebo_ros spawn_model -param robot_description -urdf %s -model prius" % spawn_pose)
+
+    def set_tl_next(self):
+        rospy.logdebug("vehicle_control_gui: setting next traffic light phase")
+        self.traffic_light_control.setNextPhase()
+
+    def set_tl_auto(self):
+        rospy.logdebug("vehicle_control_gui: setting automatic traffic light phase")
+        self.traffic_light_control.setAutomatic()
 
 
 if __name__ == '__main__':

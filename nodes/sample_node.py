@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """
 This is a sample node for the ASD lab.
@@ -9,7 +9,6 @@ It will:
 * publish a debug image  
 """
 
-from __future__ import print_function
 import rospy
 import tf
 from car_demo.msg import Control, Trajectory, ControlDebug, TrafficLightStatus
@@ -105,7 +104,7 @@ if __name__ == '__main__':
 
         # get vehicle position data 
         try:
-            (trans, rot) = tf_listener.lookupTransform('/map', '/din70000', rospy.Time(0)) # get latest trafo between world and vehicle
+            (trans, rot) = tf_listener.lookupTransform('map', 'din70000', rospy.Time(0)) # get latest trafo between world and vehicle
             rpy = tf.transformations.euler_from_quaternion(rot)
             rospy.loginfo("pos: T=[%.1f, %.1f, %.1f], rpy=[%.1f, %.1f, %.1f]" % 
                           (trans[0], trans[1], trans[2], rpy[0], rpy[1], rpy[2]))
