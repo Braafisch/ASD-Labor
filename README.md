@@ -4,7 +4,7 @@ A simple example for running a vehicle simulation in Gazebo.
 This repository has been forked from https://github.com/osrf/car_demo.
 
 To run this
-* install ros-desktop-full and gazebo or even better: download vmware image from https://bwsyncandshare.kit.edu/s/4bo6XdJ6eYGnxMb 
+* install ros-desktop-full and gazebo or even better: download vmware image from http://www2.hs-esslingen.de/public/Dozenten-Media/Dang/
 * install fake localization, map server, and smach tools:
     * `sudo apt update`
     * `sudo apt install ros-noetic-fake-localization ros-noetic-map-server`
