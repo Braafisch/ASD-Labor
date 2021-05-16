@@ -4,7 +4,9 @@
   <description>
   The car demo
   </description>
-  <maintainer email="tfoote@openrobotics.org">Tully Foote</maintainer>
+  <maintainer email="free.geronimo@hotmail.de">Andreas Baulig</maintainer>
+  <maintainer email="64274389+Braafisch@users.noreply.github.com">Wolfgang Bradfisch</maintainer>
+  <maintainer email="83015830+sunny-5555@users.noreply.github.com">Sungeeta Singh</maintainer>
   <license>APACHE 2.0</license>
   <buildtool_depend>catkin</buildtool_depend>
   <build_depend>message_generation</build_depend>
