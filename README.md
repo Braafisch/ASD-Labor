@@ -12,7 +12,7 @@ To start, you'll have to install a ROS/Gazebo environment on your local system. 
 
 3. Install [Rocker](https://github.com/osrf/rocker) by following [these](https://github.com/osrf/rocker#installation) steps.
 
-4. We now have to tools needed to create Docker images and run ROS/Gazebo inside a container. Its time to prepare the image:
+4. We now have the tools needed to create Docker images and run ROS/Gazebo inside a container. It's time to prepare the image:
     1. Start with a pre-defined ROS image. If you installed `nvidia-container-toolkit`, you can use option `--nvidia` to include hardware acceleration capabilities.
 
         ```sh
@@ -34,7 +34,7 @@ To start, you'll have to install a ROS/Gazebo environment on your local system. 
             osrf/ros:noetic-desktop-full
         ```
 
-        This will download the `noetic-desktop-full` ROS image, which contains a complete base install of ROS Noetic Ninjemys, from which we can expand. After pulling, extracting and building the image Docker will present you with a command prompt, that is running _inside_ the newly container. Continue from there with the next step.
+        This will download the `noetic-desktop-full` ROS image, which contains a complete base install of ROS Noetic Ninjemys, from which we can expand. After pulling, extracting and building the image, Docker will present you with a command prompt running _inside_ the new container. Continue from there with the next step.
 
     2. Inside the container install a few more libraries and tools:
 
@@ -61,7 +61,7 @@ To start, you'll have to install a ROS/Gazebo environment on your local system. 
         history -c
         ```
 
-        During installation, you may be prompted to provide some information about your keyboard layout. After all packages installed successfully **do not exit out of the container**.
+        During installation, you may be prompted to provide some information about your keyboard layout. After installation completed **do not exit out of the container**.
 
     3. Open a second terminal (on your host Linux, not inside the container) and commit the container we commissioned just now.
 
@@ -73,7 +73,7 @@ To start, you'll have to install a ROS/Gazebo environment on your local system. 
 
         This will _bake_ the tools we've installed into a neatly packaged image called `osrf/ros:noetic-desktop-full-asd`. Use this image to execute this project.
 
-    4. You can now stop this container. In future, simply use image `osrf/ros:noetic-desktop-full-asd`.
+    4. You can now stop this container. In the future, simply use image `osrf/ros:noetic-desktop-full-asd`.
 
         ```sh
         # in container
