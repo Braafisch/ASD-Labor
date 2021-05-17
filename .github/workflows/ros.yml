@@ -9,7 +9,7 @@ jobs:
             - name: Checkout repository
               uses: actions/checkout@v1
             - name: Setup ROS 1 environment with catkin
-              uses: betwo/github-setup-catkin@v1.1.1
+              uses: betwo/github-setup-catkin@v1.3.0
               env:
                   ACTIONS_ALLOW_UNSECURE_COMMANDS: true
               with:
