@@ -1,0 +1,19 @@
+name: ROS
+
+on: [push, pull_request]
+
+jobs:
+    ros:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v1
+            - name: Setup ROS 1 environment with catkin
+              uses: betwo/github-setup-catkin@v1.1.1
+              env:
+                  ACTIONS_ALLOW_UNSECURE_COMMANDS: true
+              with:
+                  ros-version: 'noetic'
+                  workspace: '$GITHUB_WORKSPACE'
+            - name: Build catkin workspace
+              run: catkin_make_isolated

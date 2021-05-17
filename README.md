@@ -1,5 +1,7 @@
 # Autonomous Systems Design - Lab
 
+[![ROS](https://github.com/Braafisch/ASD-Labor/actions/workflows/ros.yml/badge.svg)](https://github.com/Braafisch/ASD-Labor/actions/workflows/ros.yml)
+
 A lab exercise designed to explore autonomous systems design via vehicle simulation in Gazebo and ROS. This repository has been forked from [osrf/car_demo](https://github.com/osrf/car_demo).
 
 ## Getting Started
