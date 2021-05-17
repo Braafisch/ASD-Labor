@@ -10,8 +10,6 @@ jobs:
               uses: actions/checkout@v2
             - name: Setup ROS 1 environment with catkin
               uses: betwo/github-setup-catkin@v1.3.0
-              env:
-                  ACTIONS_ALLOW_UNSECURE_COMMANDS: true
               with:
                   ros-version: 'noetic'
                   workspace: '$GITHUB_WORKSPACE'
