@@ -14,11 +14,11 @@
             "--config",
             "${workspaceFolder}/src/asd-lab/.flake8",
         ],
-        "python.pythonPath": "${workspaceFolder}/src/asd-lab/.venv/bin/python",
+        "python.pythonPath": "/usr/bin/python",
         "terminal.integrated.defaultProfile.linux": "/bin/zsh",
     },
     "remoteUser": "vscode",
-    "postCreateCommand": "rosdep update && sudo apt-get update && rosdep install --from-paths --ignore-src src -y -r && cd /workspace/src/asd-lab && poetry install --no-root --no-interaction && poetry run pre-commit install",
+    "postCreateCommand": "rosdep update && sudo apt-get update && rosdep install --from-paths --ignore-src src -y -r && cd /workspace/src/asd-lab && pre-commit install",
     "shutdownAction": "stopCompose",
     "extensions": [
         "actboy168.tasks",

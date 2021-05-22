@@ -19,9 +19,9 @@ RUN export DEBIAN_FRONTEND=noninteractive \
     zsh \
     && rm -rf /var/lib/apt/lists/*
 
-RUN python3 -m pip install --no-cache-dir \
-    poetry \
-    rosdep
+COPY requirements.txt /tmp/pip-tmp/
+RUN python3 -m pip --disable-pip-version-check --no-cache-dir install -r /tmp/pip-tmp/requirements.txt \
+    && rm -rf /tmp/pip-tmp
 
 ENV ROS_DISTRO=${ROS_DISTRO}
 ENV ROS_PYTHON_VERSION=3
