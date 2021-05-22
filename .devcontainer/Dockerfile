@@ -9,11 +9,13 @@ ARG ROS_DISTRO=noetic
 RUN export DEBIAN_FRONTEND=noninteractive \
     && apt-get update \
     && apt-get install -y --no-install-recommends \
+    build-essential \
     curl \
     git \
     python-is-python3 \
     python3 \
     python3-pip \
+    python3-rosdep \
     ros-${ROS_DISTRO}-desktop-full \
     vim-gtk \
     zsh \
