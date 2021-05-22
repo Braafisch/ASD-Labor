@@ -2,9 +2,6 @@ version: "3"
 services:
     xserver:
         image: devrt/xserver
-        ipc: host
-        security_opt:
-            - seccomp:unconfined
         ports:
             - "3000:80"
         healthcheck:
@@ -14,9 +11,6 @@ services:
     workspace:
         build: .
         user: vscode
-        ipc: host
-        security_opt:
-            - seccomp:unconfined
         ports:
             - "3001:3000"
             - "3002:8888"
