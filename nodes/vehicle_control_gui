@@ -2,7 +2,7 @@
 
 # This is a simple program to control the vehicle in the OSRF car demo.
 
-from tkinter import *
+from tkinter import Tk, Frame, StringVar, Label, Button, X, W
 from threading import Lock
 import rospy
 from car_demo.msg import Control, TrafficLightControl
@@ -13,32 +13,36 @@ import time
 
 class TrafficLightControlSender:
     """
-    This class allows setting the next phase of the traffic light via ros messages.
-    Two attributes of this class are available:
-    * automatic: True if phase shall be adjusted based on ellabpsed time
-    * event_counter: whenever "Next Phase" is selected from the context menu, this 
-        counter is increased by one
+    This class allows setting the next phase of the traffic light via ros
+    messages. Two attributes of this class are available:
+    * automatic: True if phase shall be adjusted based on elapsed time
+    * event_counter: whenever "Next Phase" is selected from the context menu,
+        this counter is increased by one
     """
 
     def __init__(self):
         self.automatic = False
         self.event_counter = 0
-        self.pub = rospy.Publisher('traffic_light_control', TrafficLightControl, queue_size=1)  
+        self.pub = rospy.Publisher(
+            "traffic_light_control", TrafficLightControl, queue_size=1
+        )
 
     def sendControlMessage(self):
         command = TrafficLightControl()
         command.header = std_msgs.msg.Header()
-        command.header.stamp = rospy.Time.now() 
+        command.header.stamp = rospy.Time.now()
         command.automatic = self.automatic
         command.event_counter = self.event_counter
-        rospy.logdebug("TrafficLightInteraction sending: %d, %d" %
-                        (command.automatic, command.event_counter))
+        rospy.logdebug(
+            "TrafficLightInteraction sending: %d, %d"
+            % (command.automatic, command.event_counter)
+        )
         self.pub.publish(command)
 
     def setNextPhase(self):
         self.automatic = False
-        self.event_counter = self.event_counter+1
-        if self.event_counter>100:
+        self.event_counter = self.event_counter + 1
+        if self.event_counter > 100:
             self.event_counter = 0
         self.sendControlMessage()
 
@@ -51,7 +55,7 @@ class TrafficLightControlSender:
 class App:
     def __init__(self, master):
 
-        self.pub = rospy.Publisher('prius', Control, queue_size=1)
+        self.pub = rospy.Publisher("prius", Control, queue_size=1)
         self.traffic_light_control = TrafficLightControlSender()
         self.mutex = Lock()
 
@@ -61,10 +65,10 @@ class App:
         self.gear = int(Control.FORWARD)
         self.gear2str = dict()
 
-        self.gear2str[Control.NO_COMMAND] = 'NO_COMMAND'
-        self.gear2str[Control.NEUTRAL] = 'NEUTRAL'
-        self.gear2str[Control.FORWARD] = 'FORWARD'
-        self.gear2str[Control.REVERSE] = 'REVERSE'
+        self.gear2str[Control.NO_COMMAND] = "NO_COMMAND"
+        self.gear2str[Control.NEUTRAL] = "NEUTRAL"
+        self.gear2str[Control.FORWARD] = "FORWARD"
+        self.gear2str[Control.REVERSE] = "REVERSE"
         self.mutex.release()
 
         frame = Frame(master)
@@ -72,62 +76,42 @@ class App:
         self.text = StringVar()
         self.label = Label(frame, textvariable=self.text, height=2, width=30)
         self.label.pack()
-        self.faster = Button(frame,
-                             text="+",
-                             command=self.inc_speed)
+        self.faster = Button(frame, text="+", command=self.inc_speed)
         self.faster.pack(fill=X)
-        self.slower = Button(frame,
-                             text="-",
-                             command=self.dec_speed)
+        self.slower = Button(frame, text="-", command=self.dec_speed)
         self.slower.pack(fill=X)
-        self.left = Button(frame,
-                           text="<<",
-                           command=self.inc_steer)
+        self.left = Button(frame, text="<<", command=self.inc_steer)
         self.left.pack(fill=X)
-        self.right = Button(frame,
-                            text=">>",
-                            command=self.dec_steer)
+        self.right = Button(frame, text=">>", command=self.dec_steer)
         self.right.pack(fill=X)
         self.gearLabel = Label(frame, text="Gear:", height=1, width=30, anchor=W)
         self.gearLabel.pack()
-        self.forward = Button(frame,
-                              text="Forward",
-                              command=self.set_gear_forward)
+        self.forward = Button(frame, text="Forward", command=self.set_gear_forward)
         self.forward.pack(fill=X)
-        self.reverse = Button(frame,
-                              text="Reverse",
-                              command=self.set_gear_reverse)
+        self.reverse = Button(frame, text="Reverse", command=self.set_gear_reverse)
         self.reverse.pack(fill=X)
-        self.stop = Button(frame,
-                           text="Stop",
-                           command=self.set_stop)
+        self.stop = Button(frame, text="Stop", command=self.set_stop)
         self.stop.pack(fill=X)
-        self.respawn = Button(frame,
-                              text="Respawn",
-                              command=self.respawn_robot)
+        self.respawn = Button(frame, text="Respawn", command=self.respawn_robot)
         self.tlLabel = Label(frame, text="Traffic light:", height=1, width=30, anchor=W)
         self.tlLabel.pack()
-        self.nextPhase = Button(frame,
-                                text="Next phase",
-                                command=self.set_tl_next)
-        self.nextPhase.pack(fill=X)        
-        self.autoPhase = Button(frame,
-                                text="Automatic",
-                                command=self.set_tl_auto)
-        self.autoPhase.pack(fill=X)        
+        self.nextPhase = Button(frame, text="Next phase", command=self.set_tl_next)
+        self.nextPhase.pack(fill=X)
+        self.autoPhase = Button(frame, text="Automatic", command=self.set_tl_auto)
+        self.autoPhase.pack(fill=X)
         self.resetLabel = Label(frame, text="Reset:", height=1, width=30, anchor=W)
         self.resetLabel.pack()
         self.respawn.pack(fill=X)
-        self.quit = Button(frame,
-                           text="QUIT", fg="red",
-                           command=frame.quit)
+        self.quit = Button(frame, text="QUIT", fg="red", command=frame.quit)
         self.quit.pack(fill=X)
         self.update_text()
 
     def update_text(self):
         self.mutex.acquire()
-        self.text.set("throttle=%.1f, delta=%.1f\ngear=%s" %
-                      (self.throttle, self.steer, self.gear2str[self.gear]))
+        self.text.set(
+            "throttle=%.1f, delta=%.1f\ngear=%s"
+            % (self.throttle, self.steer, self.gear2str[self.gear])
+        )
         self.mutex.release()
 
     def send_controls(self):
@@ -148,34 +132,36 @@ class App:
             command.throttle = 0
             command.brake = -_throttle
 
-        rospy.logdebug("vehicle_control_gui sending: %.1f, %.1f, %.1f, %d" %
-                       (command.throttle, command.brake, command.steer, command.shift_gears))
+        rospy.logdebug(
+            "vehicle_control_gui sending: %.1f, %.1f, %.1f, %d"
+            % (command.throttle, command.brake, command.steer, command.shift_gears)
+        )
         self.pub.publish(command)
 
     def inc_speed(self):
         self.mutex.acquire()
-        self.throttle = min([1.0, self.throttle+0.1])
+        self.throttle = min([1.0, self.throttle + 0.1])
         self.mutex.release()
         self.update_text()
         self.send_controls()
 
     def dec_speed(self):
         self.mutex.acquire()
-        self.throttle = max([-1.0, self.throttle-0.1])
+        self.throttle = max([-1.0, self.throttle - 0.1])
         self.mutex.release()
         self.update_text()
         self.send_controls()
 
     def inc_steer(self):
         self.mutex.acquire()
-        self.steer = min([1.0, self.steer+0.1])
+        self.steer = min([1.0, self.steer + 0.1])
         self.mutex.release()
         self.update_text()
         self.send_controls()
 
     def dec_steer(self):
         self.mutex.acquire()
-        self.steer = max([-1.0, self.steer-0.1])
+        self.steer = max([-1.0, self.steer - 0.1])
         self.mutex.release()
         self.update_text()
         self.send_controls()
@@ -209,14 +195,16 @@ class App:
         self.gear = Control.NEUTRAL
         self.mutex.release()
         self.update_text()
-        self.send_controls()        
+        self.send_controls()
 
     def respawn_robot(self):
         os.system("rosservice call gazebo/delete_model '{model_name: prius}'")
         os.system("sleep 2")
         spawn_pose = rospy.get_param("/spawn_pose")
         os.system(
-            "rosrun gazebo_ros spawn_model -param robot_description -urdf %s -model prius" % spawn_pose)
+            "rosrun gazebo_ros spawn_model -param robot_description -urdf %s "
+            "-model prius" % spawn_pose
+        )
 
     def set_tl_next(self):
         rospy.logdebug("vehicle_control_gui: setting next traffic light phase")
@@ -227,8 +215,8 @@ class App:
         self.traffic_light_control.setAutomatic()
 
 
-if __name__ == '__main__':
-    rospy.init_node('vehicle_control_gui')
+if __name__ == "__main__":
+    rospy.init_node("vehicle_control_gui")
 
     root = Tk()
     rospy.on_shutdown(root.quit)

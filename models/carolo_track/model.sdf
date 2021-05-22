@@ -24,7 +24,7 @@
                     <ode/>
                     </contact>
                     <bounce/>
-                </surface>                
+                </surface>
             </collision>
             <visual name="visual">
                 <cast_shadows>false</cast_shadows>

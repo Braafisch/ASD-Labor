@@ -44,7 +44,7 @@
       <origin xyz="0 0 0" rpy="0 0 0"/>
       <geometry>
         <mesh filename="package://car_demo/meshes/hybrid_body.obj" scale="0.01 0.01 0.01"/>
-        <!--- Uncomment line above and use next line for calibration: 
+        <!--- Uncomment line above and use next line for calibration:
         <mesh filename="package://car_demo/meshes/FloorBox.obj" scale="1 1 1"/>
         -->
       </geometry>
@@ -654,7 +654,7 @@
     </sensor>
   </gazebo>
 
-  <!--- 
+  <!---
   <gazebo reference="birdview_camera_link">
     <sensor type="camera" name="birdview_camera_sensor">
       <update_rate>10.0</update_rate>
@@ -693,7 +693,7 @@
   </gazebo>
   -->
 
-  <!--- 
+  <!---
   <gazebo reference="back_camera_link">
     <sensor type="camera" name="back_camera_sensor">
       <update_rate>30.0</update_rate>
@@ -806,7 +806,7 @@
   </gazebo>
   -->
 
-  <!--- 
+  <!---
   <gazebo reference="back_left_far_sonar_link">
     <sensor name='back_left_far_sonar_sensor' type='ray'>
       <ray>

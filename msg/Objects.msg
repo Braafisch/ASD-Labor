@@ -6,7 +6,3 @@ float64[] x
 float64[] y
 # radius [m]
 float64[] r
-
-
-
-

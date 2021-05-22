@@ -8,6 +8,3 @@ float64 Y_offset
 float64 dPhi
 # Parabola coefficient [1]
 float64 c0
-
-
-

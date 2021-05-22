@@ -12,6 +12,3 @@ float64[] c
 float64[] v
 # distance [m]
 float64[] s
-
-
-

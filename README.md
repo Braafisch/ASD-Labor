@@ -6,6 +6,8 @@ A lab exercise designed to explore autonomous systems design via vehicle simulat
 
 ## Getting Started
 
+### Using Rocker
+
 To start, you'll have to install a ROS/Gazebo environment on your local system. There are various ways to do this. Our recommended way of creating a neatly packaged installation is through [Docker](https://www.docker.com/) and the [osrf/rocker](https://github.com/osrf/rocker) helper tool. Assuming you have a **Linux environment** (either in a VM or native), follow these steps:
 
 1. Install [Docker Engine](https://docs.docker.com/engine/install/), by following the steps listed for your distro.
@@ -15,6 +17,7 @@ To start, you'll have to install a ROS/Gazebo environment on your local system. 
 3. Install [Rocker](https://github.com/osrf/rocker) by following [these](https://github.com/osrf/rocker#installation) steps.
 
 4. We now have the tools needed to create Docker images and run ROS/Gazebo inside a container. It's time to prepare the image:
+
     1. Start with a pre-defined ROS image. If you installed `nvidia-container-toolkit`, you can use option `--nvidia` to include hardware acceleration capabilities.
 
         ```sh
@@ -128,10 +131,20 @@ To start, you'll have to install a ROS/Gazebo environment on your local system. 
     docker exec -it 'ros-asd-lab' bash # or zsh
     ```
 
+### Using Devcontainer
+
+For development in vscode it might be more convenient to use the provided devcontainer. Make sure to install the [Remote - Containers](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers) extension, [Docker Engine](https://docs.docker.com/engine/install/) and [Docker-Compose](https://docs.docker.com/compose/install/). After installation hit `Ctrl + Shift + P` and run `>Remote-Containers: Rebuild and Reopen in Container` from the command palette. This will instruct docker-compose to build the provided `Dockerfile` and start up a `workspace` and `xserver` container. Building will take a few minutes, but only has to be done once. The `workspace` container is where we will do most of our development work. `xserver` provides a virtual desktop for GUI tools like `rviz`, accessible via `http://localhost:3000`. Use `>Simple Browser: Show` from the vscode command palette (`Ctrl + Shift + P`) to open an in-app webbrowser.
+
 ## Contributors
+
+This project is a fork of [osrf/car_demo](https://github.com/osrf/car_demo) with its respective authors. The devcontainer environment is largely based on the template provided by [devrt/ros-devcontainer-vscode](https://github.com/devrt/ros-devcontainer-vscode).
 
 Main contributors sorted by lastname:
 
-* Andreas Baulig
-* Wolfgang Bradfisch
-* Sungeeta Singh
+-   Andreas Baulig
+-   Wolfgang Bradfisch
+-   Sungeeta Singh
+
+Under supervision by:
+
+-   Thao Dang
