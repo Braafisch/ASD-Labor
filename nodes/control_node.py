@@ -38,7 +38,7 @@ class TrajectoryHandler:
 
 
 if __name__ == "__main__":
-    rospy.init_node("planning_node")
+    rospy.init_node("control_node")
     rate = rospy.Rate(1.0)
 
     # subscribers
