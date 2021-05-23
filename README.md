@@ -133,11 +133,37 @@ To start, you'll have to install a ROS/Gazebo environment on your local system. 
 
 ### Using Devcontainer
 
-For development in vscode it might be more convenient to use the provided devcontainer. Make sure to install the [Remote - Containers](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers) extension, [Docker Engine](https://docs.docker.com/engine/install/) and [Docker-Compose](https://docs.docker.com/compose/install/). After installation hit `Ctrl + Shift + P` and run `>Remote-Containers: Rebuild and Reopen in Container` from the command palette. This will instruct docker-compose to build the provided `Dockerfile` and start up a `workspace` and `xserver` container. Building will take a few minutes, but only has to be done once. The `workspace` container is where we will do most of our development work. `xserver` provides a virtual desktop for GUI tools like `rviz`, accessible via `http://localhost:3000`. Use `>Simple Browser: Show` from the vscode command palette (`Ctrl + Shift + P`) to open an in-app webbrowser.
+While less performant due to lack of hardware acceleration, the devcontainer may provide a better development experience. It only requires you to install [Docker Engine](https://docs.docker.com/engine/) and offers full language server support for vscode. To get up and running with the devcontainer follow these steps:
+
+1. Install [Docker Engine](https://docs.docker.com/engine/install/), by following the steps listed for your distro.
+
+2. In vscode install the [Remote - Containers](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers) extension.
+
+3. After installation hit `Ctrl + Shift + P` and run `>Remote-Containers: Rebuild and Reopen in Container` from the command palette. This will instruct Docker to build the provided `Dockerfile`, inside of which, we will be able to develop and test our application. Installation may take a few minutes, but only has to be done once.
+
+4. The dev-image comes with a light desktop environment (via VNC and noVNC), meaning we can run GUI applications _inside_ the container. To view them open a webbrowser of your choice, or use `>Simple Browser: Show` from the vscode command palette, and connect to `http://localhost:6080` (password: `vscode`). Alternatively, use a [VNC viewer](https://www.realvnc.com/en/connect/download/viewer/) to connect to port `5901`.
+
+5. To build the application follow the usual steps:
+
+    ```sh
+    cd /workspace
+    catkin_make
+    # where $SHELL should be either bash, zsh or sh
+    source "devel/setup.$(basename $SHELL)"
+    ```
+
+6. Launch the demo:
+
+    ```sh
+    cd /workspace
+    roslaunch car_demo demo_keyboard.launch
+    ```
+
+    You should now see several GUI applications pop up on noVNC.
 
 ## Contributors
 
-This project is a fork of [osrf/car_demo](https://github.com/osrf/car_demo) with its respective authors. The devcontainer environment is largely based on the template provided by [devrt/ros-devcontainer-vscode](https://github.com/devrt/ros-devcontainer-vscode).
+This project is a fork of [osrf/car_demo](https://github.com/osrf/car_demo) with its respective authors. The devcontainer environment is largely based on the template provided by [devrt/ros-devcontainer-vscode](https://github.com/devrt/ros-devcontainer-vscode). Light desktop environment script by [microsoft/vscode-dev-containers](https://github.com/microsoft/vscode-dev-containers).
 
 Main contributors sorted by lastname:
 

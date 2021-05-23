@@ -32,9 +32,12 @@ RUN rosdep init
 
 RUN echo "source /opt/ros/${ROS_DISTRO}/setup.bash" >> /etc/bash.bashrc
 
+COPY library-scripts/desktop-lite-debian.sh /tmp/library-scripts/
+RUN apt-get update && bash /tmp/library-scripts/desktop-lite-debian.sh
+ENV DBUS_SESSION_BUS_ADDRESS="autolaunch:" DISPLAY=":1" LANG="en_US.UTF-8" LANGUAGE="en_US.UTF-8"
+
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
-EXPOSE 3000
-
-ENTRYPOINT [ "/entrypoint.sh" ]
+ENTRYPOINT ["/usr/local/share/desktop-init.sh", "/entrypoint.sh"]
+CMD ["sleep", "infinity"]
