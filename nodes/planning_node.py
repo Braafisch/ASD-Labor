@@ -20,7 +20,7 @@ class LaneCoefficientsHandler:
     A class to subscribe to lane coefficient updates and print received data.
     """
 
-    # TODO: replace handler behaviour with proper trajectory planning
+    # TODO: replace handler behavior with proper trajectory planning
 
     def __init__(self):
         # subscribe to lane coefficient updates
@@ -43,7 +43,7 @@ class TrafficLightHandler:
     A class to subscribe to traffic light status and print received data.
     """
 
-    # TODO: replace handler behaviour with proper trajectory planning
+    # TODO: replace handler behavior with proper trajectory planning
 
     def __init__(self):
         # subscribe to traffic light status

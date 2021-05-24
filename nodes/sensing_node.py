@@ -22,7 +22,7 @@ class ImageHandler:
     A class to subscribe to an image and create and publish a debug image.
     """
 
-    # TODO: replace handler behaviour with proper trajectory planning
+    # TODO: replace handler behavior with proper trajectory planning
 
     def __init__(self):
         self.bridge = CvBridge()
