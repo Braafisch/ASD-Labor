@@ -31,6 +31,7 @@ ENV ROS_PYTHON_VERSION=3
 RUN rosdep init
 
 RUN echo "source /opt/ros/${ROS_DISTRO}/setup.bash" >> /etc/bash.bashrc
+RUN echo "source /opt/ros/${ROS_DISTRO}/setup.zsh" >> /etc/zsh/zshrc
 
 COPY library-scripts/desktop-lite-debian.sh /tmp/library-scripts/
 RUN apt-get update && bash /tmp/library-scripts/desktop-lite-debian.sh
