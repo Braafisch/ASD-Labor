@@ -5,7 +5,6 @@ RUN echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc
     && apt-key adv --keyserver 'hkp://keyserver.ubuntu.com:80' --recv-key C1CF6E31E6BADE8868B172B4F42ED6FBAB17C654
 
 ARG ROS_DISTRO=noetic
-
 RUN export DEBIAN_FRONTEND=noninteractive \
     && apt-get update \
     && apt-get install -y --no-install-recommends \
@@ -25,13 +24,18 @@ COPY requirements.txt /tmp/pip-tmp/
 RUN python3 -m pip --disable-pip-version-check --no-cache-dir install -r /tmp/pip-tmp/requirements.txt \
     && rm -rf /tmp/pip-tmp
 
+ARG HADOLINT_VERSION=v2.4.1
+RUN curl -SL https://github.com/hadolint/hadolint/releases/download/${HADOLINT_VERSION}/hadolint-Linux-x86_64 -o /usr/local/bin/hadolint \
+    && chmod +x /usr/local/bin/hadolint
+
 ENV ROS_DISTRO=${ROS_DISTRO}
 ENV ROS_PYTHON_VERSION=3
 
+# hadolint ignore=DL3059,
 RUN rosdep init
 
-RUN echo "source /opt/ros/${ROS_DISTRO}/setup.bash" >> /etc/bash.bashrc
-RUN echo "source /opt/ros/${ROS_DISTRO}/setup.zsh" >> /etc/zsh/zshrc
+RUN echo "source /opt/ros/${ROS_DISTRO}/setup.bash" >> /etc/bash.bashrc \
+    && echo "source /opt/ros/${ROS_DISTRO}/setup.zsh" >> /etc/zsh/zshrc
 
 COPY library-scripts/desktop-lite-debian.sh /tmp/library-scripts/
 RUN apt-get update \
