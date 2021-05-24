@@ -34,7 +34,9 @@ RUN echo "source /opt/ros/${ROS_DISTRO}/setup.bash" >> /etc/bash.bashrc
 RUN echo "source /opt/ros/${ROS_DISTRO}/setup.zsh" >> /etc/zsh/zshrc
 
 COPY library-scripts/desktop-lite-debian.sh /tmp/library-scripts/
-RUN apt-get update && bash /tmp/library-scripts/desktop-lite-debian.sh
+RUN apt-get update \
+    && bash /tmp/library-scripts/desktop-lite-debian.sh \
+    && rm -rf /var/lib/apt/lists/*
 ENV DBUS_SESSION_BUS_ADDRESS="autolaunch:" DISPLAY=":1" LANG="en_US.UTF-8" LANGUAGE="en_US.UTF-8"
 
 COPY entrypoint.sh /entrypoint.sh
