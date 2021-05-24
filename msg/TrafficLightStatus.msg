@@ -17,12 +17,9 @@ uint8 state
 # distances indicate that we passed the stop line.
 float64 dist_m
 
-# orientation difference (in rad, -pi..pi) between vehicle's orientation and 
-# the normal vector of the stop line (in driving direction of the lane 
+# orientation difference (in rad, -pi..pi) between vehicle's orientation and
+# the normal vector of the stop line (in driving direction of the lane
 # associated with the stop line).
-# For an illustration of dphi_rad, see "stopline_msg.png" in the 
+# For an illustration of dphi_rad, see "stopline_msg.png" in the
 # "car_demo/doc" directory.
 float64 dphi_rad
-
-
-

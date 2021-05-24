@@ -6,6 +6,8 @@ A lab exercise designed to explore autonomous systems design via vehicle simulat
 
 ## Getting Started
 
+### Using Rocker
+
 To start, you'll have to install a ROS/Gazebo environment on your local system. There are various ways to do this. Our recommended way of creating a neatly packaged installation is through [Docker](https://www.docker.com/) and the [osrf/rocker](https://github.com/osrf/rocker) helper tool. Assuming you have a **Linux environment** (either in a VM or native), follow these steps:
 
 1. Install [Docker Engine](https://docs.docker.com/engine/install/), by following the steps listed for your distro.
@@ -15,6 +17,7 @@ To start, you'll have to install a ROS/Gazebo environment on your local system. 
 3. Install [Rocker](https://github.com/osrf/rocker) by following [these](https://github.com/osrf/rocker#installation) steps.
 
 4. We now have the tools needed to create Docker images and run ROS/Gazebo inside a container. It's time to prepare the image:
+
     1. Start with a pre-defined ROS image. If you installed `nvidia-container-toolkit`, you can use option `--nvidia` to include hardware acceleration capabilities.
 
         ```sh
@@ -128,10 +131,46 @@ To start, you'll have to install a ROS/Gazebo environment on your local system. 
     docker exec -it 'ros-asd-lab' bash # or zsh
     ```
 
+### Using Devcontainer
+
+While less performant due to lack of hardware acceleration, the devcontainer may provide a better development experience. It only requires you to install [Docker Engine](https://docs.docker.com/engine/) and offers full language server support for vscode. To get up and running with the devcontainer follow these steps:
+
+1. Install [Docker Engine](https://docs.docker.com/engine/install/), by following the steps listed for your distro.
+
+2. In vscode install the [Remote - Containers](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers) extension.
+
+3. After installation hit `Ctrl + Shift + P` and run `>Remote-Containers: Rebuild and Reopen in Container` from the command palette. This will instruct Docker to build the provided `Dockerfile`, inside of which, we will be able to develop and test our application. Installation may take a few minutes, but only has to be done once.
+
+4. The dev-image comes with a light desktop environment (via VNC and noVNC), meaning we can run GUI applications _inside_ the container. To view them open a webbrowser of your choice, or use `>Simple Browser: Show` from the vscode command palette, and connect to `http://localhost:6080` (password: `vscode`). Alternatively, use a [VNC viewer](https://www.realvnc.com/en/connect/download/viewer/) to connect to port `5901`.
+
+5. To build the application follow the usual steps:
+
+    ```sh
+    cd /workspace
+    catkin_make
+    # where $SHELL should be either bash, zsh or sh
+    source "devel/setup.$(basename $SHELL)"
+    ```
+
+6. Launch the demo:
+
+    ```sh
+    cd /workspace
+    roslaunch car_demo demo_keyboard.launch
+    ```
+
+    You should now see several GUI applications pop up on noVNC.
+
 ## Contributors
+
+This project is a fork of [osrf/car_demo](https://github.com/osrf/car_demo) with its respective authors. The devcontainer environment is largely based on the template provided by [devrt/ros-devcontainer-vscode](https://github.com/devrt/ros-devcontainer-vscode). Light desktop environment script by [microsoft/vscode-dev-containers](https://github.com/microsoft/vscode-dev-containers).
 
 Main contributors sorted by lastname:
 
-* Andreas Baulig
-* Wolfgang Bradfisch
-* Sungeeta Singh
+-   Andreas Baulig
+-   Wolfgang Bradfisch
+-   Sungeeta Singh
+
+Under supervision by:
+
+-   Thao Dang

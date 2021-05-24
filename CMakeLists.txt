@@ -56,7 +56,7 @@ add_library(PriusHybridPlugin SHARED plugins/PriusHybridPlugin.cc)
 target_link_libraries(PriusHybridPlugin ${GAZEBO_LIBRARIES} ${IGNITION-MSGS_LIBRARIES})
 add_dependencies(PriusHybridPlugin ${catkin_EXPORTED_TARGETS})
 
-catkin_install_python(PROGRAMS nodes/vehicle_control_gui 
+catkin_install_python(PROGRAMS nodes/vehicle_control_gui
                       DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
 install(TARGETS PriusHybridPlugin
@@ -68,4 +68,3 @@ install(TARGETS PriusHybridPlugin
 install(DIRECTORY models DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
 install(DIRECTORY worlds DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
 install(DIRECTORY meshes DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
-

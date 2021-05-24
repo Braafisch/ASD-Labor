@@ -11,7 +11,7 @@ jobs:
             - name: Setup ROS 1 environment with catkin
               uses: betwo/github-setup-catkin@v1.3.0
               with:
-                  ros-version: 'noetic'
-                  workspace: '$GITHUB_WORKSPACE'
+                  ros-version: "noetic"
+                  workspace: "$GITHUB_WORKSPACE"
             - name: Build catkin workspace
               run: catkin_make_isolated

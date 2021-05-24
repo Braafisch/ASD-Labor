@@ -3,7 +3,7 @@
   <version>0.0.1</version>
   <description>
   The car demo
-  </description>
+</description>
   <maintainer email="free.geronimo@hotmail.de">Andreas Baulig</maintainer>
   <maintainer email="w.bradfisch@gmx.de">Wolfgang Bradfisch</maintainer>
   <maintainer email="susiit00@hs-esslingen.de">Sungeeta Singh</maintainer>
@@ -15,6 +15,7 @@
   <depend>urdf</depend>
 
   <depend>geometry_msgs</depend>
+  <depend>python3-tk</depend>
   <depend>sensor_msgs</depend>
   <depend>std_msgs</depend>
   <depend>tf2_ros</depend>
@@ -22,6 +23,7 @@
 
   <exec_depend>fake_localization</exec_depend>
   <exec_depend>joy</exec_depend>
+  <exec_depend>map_server</exec_depend>
   <exec_depend>message_runtime</exec_depend>
   <exec_depend>robot_state_publisher</exec_depend>
   <exec_depend>rospy</exec_depend>
@@ -29,6 +31,6 @@
 
   <export>
     <!-- Other tools can request additional information be placed here -->
-    <gazebo_ros plugin_path="${prefix}/lib" gazebo_media_path="${prefix}" gazebo_model_path="${prefix}/models"/>
+    <gazebo_ros plugin_path="${prefix}/lib" gazebo_media_path="${prefix}" gazebo_model_path="${prefix}/models" />
   </export>
 </package>

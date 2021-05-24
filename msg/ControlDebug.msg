@@ -18,6 +18,3 @@ float64 steering
 float64 acceleration
 # arc length [m]
 float64 s
-
-
-
