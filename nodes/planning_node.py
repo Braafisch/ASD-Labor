@@ -136,7 +136,7 @@ if __name__ == "__main__":
 
     # main loop
     while not rospy.is_shutdown():
-        # Naive trajectory planning, based souley on interpolating the
+        # Naive trajectory planning, based solely on interpolating the
         # LaneCoefficients until a traffic light is found.
 
         lane_coeff = lane_coeff_handler.latest_lane_coeff
