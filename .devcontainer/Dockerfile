@@ -24,10 +24,6 @@ COPY requirements.txt /tmp/pip-tmp/
 RUN python3 -m pip --disable-pip-version-check --no-cache-dir install -r /tmp/pip-tmp/requirements.txt \
     && rm -rf /tmp/pip-tmp
 
-ARG HADOLINT_VERSION=v2.4.1
-RUN curl -SL https://github.com/hadolint/hadolint/releases/download/${HADOLINT_VERSION}/hadolint-Linux-x86_64 -o /usr/local/bin/hadolint \
-    && chmod +x /usr/local/bin/hadolint
-
 ENV ROS_DISTRO=${ROS_DISTRO}
 ENV ROS_PYTHON_VERSION=3
 
