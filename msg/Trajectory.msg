@@ -1,6 +1,6 @@
 Header header
 
-# y coords [m]
+# x coords [m]
 float64[] x
 # y coords [m]
 float64[] y
