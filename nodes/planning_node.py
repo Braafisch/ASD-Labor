@@ -13,7 +13,7 @@ import tf
 
 from car_demo.msg import LaneCoefficients, Trajectory, TrafficLightStatus
 from geometry_msgs.msg import Point, Vector3, Quaternion
-from std_msgs.msg import ColorRGBA
+from std_msgs.msg import ColorRGBA, Header
 from tf.transformations import quaternion_from_euler
 from visualization_msgs.msg import MarkerArray, Marker
 
@@ -102,10 +102,10 @@ def create_trajectory(
 
 
 def create_debug_marker(
-    id: int, x: float, y: float, yaw: float, arrow_size: float = 0.5
+    id: int, x: float, y: float, yaw: float, header: Header, arrow_size: float = 0.5
 ) -> Marker:
     marker = Marker()
-    marker.header = trajectory.header
+    marker.header = header
     marker.id = id
     marker.action = Marker.ADD
     marker.type = Marker.ARROW
@@ -149,7 +149,9 @@ if __name__ == "__main__":
 
             marker_array = MarkerArray()
             marker_array.markers = [
-                create_debug_marker(i, x, y, th, arrow_size=STEP_SIZE)
+                create_debug_marker(
+                    i, x, y, th, trajectory.header, arrow_size=STEP_SIZE
+                )
                 for i, (x, y, th) in enumerate(
                     zip(trajectory.x, trajectory.y, trajectory.theta)
                 )
