@@ -14,7 +14,9 @@ import tf
 import numpy as np
 
 from car_demo.msg import Control, Trajectory
-#from vehicle_model import State, normalize_angle, veh_dim_x, veh_dim_y, L
+
+# from vehicle_model import State, normalize_angle, veh_dim_x, veh_dim_y, L
+
 
 class TrajectoryHandler:
     """
@@ -54,20 +56,22 @@ class TrajectoryHandler:
     def calculate_control(self, v, trajec):
         ai = trajec.v[0] - v
 
-        dx_vec = 1.35 - np.asarray(trajec.x).reshape([-1,1])
+        dx_vec = 1.35 - np.asarray(trajec.x).reshape([-1, 1])
         assert dx_vec.shape == (len(dx_vec), 1)
-        dy_vec = -np.asarray(trajec.y).reshape([-1,1])
+        dy_vec = -np.asarray(trajec.y).reshape([-1, 1])
         assert dy_vec.shape == (len(dy_vec), 1)
         dist = np.hstack([dx_vec, dy_vec])
-        front_axle_vec = [np.cos(trajec.theta[0] + np.pi / 2),
-                      np.sin(trajec.theta[0] + np.pi / 2)]
+        front_axle_vec = [
+            np.cos(trajec.theta[0] + np.pi / 2),
+            np.sin(trajec.theta[0] + np.pi / 2),
+        ]
         error_front_axle = np.dot(dist[0, :], front_axle_vec)
 
         de = trajec.theta[0] + np.arctan2(-self.k * error_front_axle, v)
         return ai, de
 
     def _callback(self, message: Trajectory):
-        
+
         rospy.loginfo(
             "trajectory: "
             f"x={str(message.x)}, "
@@ -77,7 +81,7 @@ class TrajectoryHandler:
             f"v={str(message.v)}, "
             f"s={str(message.s)}"
         )
-        
+
         a, delta = self.calculate_control(self.get_velocity(), message)
         if a >= 0:
             self.throttle = 1.0
@@ -90,7 +94,7 @@ class TrajectoryHandler:
 
     def get_control(self):
         return self.throttle, self.brake, self.steer
-        
+
 
 if __name__ == "__main__":
     rospy.init_node("control_node")
@@ -115,7 +119,11 @@ if __name__ == "__main__":
         # TODO: fill message object with proper values
         control = Control()
         control.header = std_msgs.msg.Header()
-        control.throttle, control.brake, control.steer = trajectory_handler.get_control() 
+        (
+            control.throttle,
+            control.brake,
+            control.steer,
+        ) = trajectory_handler.get_control()
         control.shift_gears = Control.FORWARD
 
         control_pub.publish(control)
