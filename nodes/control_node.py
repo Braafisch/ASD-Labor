@@ -5,7 +5,6 @@
 The task of this node is to move the vehicle along the planned trajectory.
 """
 
-from numpy.lib.function_base import _calculate_shapes
 import rospy
 import std_msgs.msg
 from sensor_msgs.msg import JointState
