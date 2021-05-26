@@ -116,7 +116,7 @@ fi
 
 # Check at least one locale exists
 if ! grep -o -E '^\s*en_US.UTF-8\s+UTF-8' /etc/locale.gen > /dev/null; then
-    echo "en_US.UTF-8 UTF-8" >> /etc/locale.gen 
+    echo "en_US.UTF-8 UTF-8" >> /etc/locale.gen
     locale-gen
 fi
 
@@ -158,14 +158,14 @@ if [ "${INSTALL_NOVNC}" = "true" ] && [ ! -d "/usr/local/novnc" ]; then
         apt-get -y install --no-install-recommends ${NOVNC_PYTHON_PACKAGE} ${NOVNC_NUMPY_PACKAGE}
     fi
     sed -i -E 's/^python /python2 /' /usr/local/novnc/websockify-${WEBSOCKETIFY_VERSION}/run
-fi 
+fi
 
 # Set up folders for scripts and init files
 mkdir -p /var/run/dbus /usr/local/etc/vscode-dev-containers/ /root/.fluxbox
 
 # Script to change resolution of desktop
 tee /usr/local/bin/set-resolution > /dev/null \
-<< EOF 
+<< EOF
 #!/bin/bash
 RESOLUTION=\${1:-\${VNC_RESOLUTION:-1920x1080}}
 DPI=\${2:-\${VNC_DPI:-96}}
@@ -193,7 +193,7 @@ fi
 
 xrandr --fb \${RESOLUTION} --dpi \${DPI} > /dev/null 2>&1
 
-if [ \$? -ne 0 ] && [ "\${IGNORE_ERROR}" != "true" ]; then 
+if [ \$? -ne 0 ] && [ "\${IGNORE_ERROR}" != "true" ]; then
     echo -e "\nFAILED TO SET RESOLUTION!\n"
     exit 1
 fi
@@ -203,7 +203,7 @@ EOF
 
 # Container ENTRYPOINT script
 tee /usr/local/share/desktop-init.sh > /dev/null \
-<< EOF 
+<< EOF
  #!/bin/bash
 
 USERNAME=${USERNAME}
@@ -293,7 +293,7 @@ log "** SCRIPT EXIT **"
 EOF
 
 echo "${VNC_PASSWORD}" | vncpasswd -f > /usr/local/etc/vscode-dev-containers/vnc-passwd
-touch /root/.Xmodmap 
+touch /root/.Xmodmap
 chmod +x /usr/local/share/desktop-init.sh /usr/local/bin/set-resolution
 
 tee /root/.fluxbox/apps > /dev/null \
@@ -342,7 +342,7 @@ tee /root/.fluxbox/menu > /dev/null \
 EOF
 
 # Set up non-root user (if one exists)
-if [ "${USERNAME}" != "root" ]; then 
+if [ "${USERNAME}" != "root" ]; then
     touch /home/${USERNAME}/.Xmodmap
     cp -R /root/.fluxbox /home/${USERNAME}
     chown -R ${USERNAME}:${USERNAME} /home/${USERNAME}/.Xmodmap /home/${USERNAME}/.fluxbox

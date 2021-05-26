@@ -20,7 +20,7 @@ class TrajectoryHandler:
     """
     A class to subscribe to trajectory updates and print received data.
     """
-    # TODO: replace handler behaviour with proper vehicle maneuvering
+
     def __init__(self):
         self.k = 0.7
         self.throttle = 0

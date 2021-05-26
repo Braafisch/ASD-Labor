@@ -5,7 +5,6 @@ RUN echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc
     && apt-key adv --keyserver 'hkp://keyserver.ubuntu.com:80' --recv-key C1CF6E31E6BADE8868B172B4F42ED6FBAB17C654
 
 ARG ROS_DISTRO=noetic
-
 RUN export DEBIAN_FRONTEND=noninteractive \
     && apt-get update \
     && apt-get install -y --no-install-recommends \
@@ -28,12 +27,16 @@ RUN python3 -m pip --disable-pip-version-check --no-cache-dir install -r /tmp/pi
 ENV ROS_DISTRO=${ROS_DISTRO}
 ENV ROS_PYTHON_VERSION=3
 
+# hadolint ignore=DL3059,
 RUN rosdep init
 
-RUN echo "source /opt/ros/${ROS_DISTRO}/setup.bash" >> /etc/bash.bashrc
+RUN echo "source /opt/ros/${ROS_DISTRO}/setup.bash" >> /etc/bash.bashrc \
+    && echo "source /opt/ros/${ROS_DISTRO}/setup.zsh" >> /etc/zsh/zshrc
 
 COPY library-scripts/desktop-lite-debian.sh /tmp/library-scripts/
-RUN apt-get update && bash /tmp/library-scripts/desktop-lite-debian.sh
+RUN apt-get update \
+    && bash /tmp/library-scripts/desktop-lite-debian.sh \
+    && rm -rf /var/lib/apt/lists/*
 ENV DBUS_SESSION_BUS_ADDRESS="autolaunch:" DISPLAY=":1" LANG="en_US.UTF-8" LANGUAGE="en_US.UTF-8"
 
 COPY entrypoint.sh /entrypoint.sh
