@@ -9,14 +9,11 @@ street, using the front facing camera.
 import cv2
 import numpy as np
 import rospy
-import std_msgs.msg
-from matplotlib import pyplot as plt
 
 from simulation_image_helper import SimulationImageHelper
 from car_demo.msg import LaneCoefficients
 from cv_bridge import CvBridge, CvBridgeError
 from sensor_msgs.msg import Image
-from visualization_msgs.msg import MarkerArray, Marker
 from geometry_msgs.msg import Point
 from std_msgs.msg import Header
 
