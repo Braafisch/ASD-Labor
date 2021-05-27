@@ -129,7 +129,7 @@ class ImageHandler:
         Z_initial = np.array([5, -0.5, 0.3, 0]).T
 
         # refine initial estimate via M-Estimator
-        self.Z_MEst = MEstimator_lane_fit(lane_left, lane_right, Z_initial, sigma=0.2, maxIteration=10)
+        self.Z_MEst = self.MEstimator_lane_fit(lane_left, lane_right, Z_initial, sigma=0.2, maxIteration=10)
         x_pred, yl_pred, yr_pred = LS_lane_compute(self.Z_MEst,max_range_m+20,step=0.25)
         self.pub_dbg_pts_lane_left_pred.publish(setMarkerPred(x_pred,yl_pred,g=1))
         self.pub_dbg_pts_lane_right_pred.publish(setMarkerPred(x_pred,yr_pred,b=1))
@@ -138,7 +138,7 @@ class ImageHandler:
     def get_Z_MEst(self):
         return self.Z_MEst
 
-def Cauchy(r, sigma=1):
+    def Cauchy(self,r, sigma=1):
         """
         Cauchy loss function.
     
@@ -154,7 +154,7 @@ def Cauchy(r, sigma=1):
         return w
 
 
-def MEstimator_lane_fit(pL, pR, Z_initial, sigma=1, maxIteration=10):
+    def MEstimator_lane_fit(self,pL, pR, Z_initial, sigma=1, maxIteration=10):
         """
         M-Estimator for lane coeffients z=(W, Y_offset, Delta_Phi, c0)^T.
 
@@ -190,7 +190,7 @@ def MEstimator_lane_fit(pL, pR, Z_initial, sigma=1, maxIteration=10):
         Z = Z_initial
         for _ in range(0,maxIteration):
             r = np.dot(H, Z) - Y
-            w = Cauchy(r,sigma)
+            w = self.Cauchy(r,sigma)
             K = np.diag(w[:,0])
             H_inv = np.linalg.inv(np.linalg.multi_dot([H.T,K,H]))
             Z = np.linalg.multi_dot([H_inv,H.T,K,Y])
