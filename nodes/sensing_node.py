@@ -188,7 +188,6 @@ class ImageHandler:
         for i in range(pR.shape[0]):
             u, v = pR[i, 0], pR[i, 1]
             u2 = u * u
-            u3 = u2 * u
             H[pL.shape[0] + i, :] = [-0.5, -1, -u, 1.0 / 2.0 * u2]
             Y[pL.shape[0] + i] = v
 
