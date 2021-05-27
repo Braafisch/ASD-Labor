@@ -34,8 +34,8 @@ class LaneCoefficientsHandler:
         self.latest_lane_coeff: LaneCoefficients = None
 
     def _callback(self, message: LaneCoefficients):
-        rospy.loginfo(
-            "lane coefficients: "
+        rospy.logdebug(
+            "Tane coefficients: "
             f"W={message.W:.3f}, "
             f"Y_offset={message.Y_offset:.3f}, "
             f"dPhi={message.dPhi:.3f}, "
@@ -63,8 +63,8 @@ class TrafficLightHandler:
             message.RED: "RED",
             message.RED_YELLOW: "RED_YELLOW",
         }
-        rospy.loginfo(
-            "traffic light: "
+        rospy.logdebug(
+            "Traffic light: "
             f"state={state_dict[message.state]}, "
             f"dist={message.dist_m:.1f}m, "
             f"dphi={message.dphi_rad * 180.0 / np.pi:.1f}deg"
@@ -134,6 +134,10 @@ if __name__ == "__main__":
     # setup traffic light handler
     traffic_light_handler = TrafficLightHandler()
 
+    rospy.loginfo("Planning node startup complete.")
+
+    first_lane_coeff_recvd = False
+
     # main loop
     while not rospy.is_shutdown():
         # Naive trajectory planning, based solely on interpolating the
@@ -142,6 +146,9 @@ if __name__ == "__main__":
         lane_coeff = lane_coeff_handler.latest_lane_coeff
 
         if lane_coeff is not None:
+            if not first_lane_coeff_recvd:
+                rospy.loginfo("First lane coefficients received.")
+                first_lane_coeff_recvd = True
             trajectory = create_trajectory(
                 lane_coeff, max_dist=MAX_DIST, step=STEP_SIZE
             )
