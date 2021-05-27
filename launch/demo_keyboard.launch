@@ -19,7 +19,7 @@
   <node pkg="fake_localization" type="fake_localization" name="fake_localization" />
   <node pkg="tf2_ros" type="static_transform_publisher" name="very_inaccurate_odom" args="0 0 0 0 0 0 odom base_link" />
   <node pkg="tf2_ros" type="static_transform_publisher" name="static_DIN70000" args="1.45 0 0 0 0 0 odom din70000" />
-  <node pkg="car_demo" type="vehicle_control_gui.py" name="vehicle_control_gui" />
+  <node pkg="car_demo" type="vehicle_control_gui" name="vehicle_control_gui" />
 
   <node name="spawn_urdf" pkg="gazebo_ros" type="spawn_model" args="-param robot_description -urdf $(arg initial_pose) -model prius" />
 
