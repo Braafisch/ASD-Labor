@@ -87,17 +87,17 @@ def create_trajectory(
     theta = np.pad(np.arctan2(delta[:, 1], delta[:, 0]), pad_width=(0, 1), mode="edge")
     c = np.pad(np.diff(theta) / step, pad_width=(0, 1), mode="edge")
     velocity = np.full_like(x, 3)  # static velocity
-    s = np.linalg.norm(delta)
+    s = np.linalg.norm(delta, axis=0)
 
     trajectory = Trajectory()
     trajectory.header = lane_coeff.header
     trajectory.header.frame_id = "base_link"
-    trajectory.x = x
-    trajectory.y = y
-    trajectory.theta = theta
-    trajectory.c = c
-    trajectory.v = velocity
-    trajectory.s = s
+    trajectory.x = tuple(x)
+    trajectory.y = tuple(y)
+    trajectory.theta = tuple(theta)
+    trajectory.c = tuple(c)
+    trajectory.v = tuple(velocity)
+    trajectory.s = tuple(s)
     return trajectory
 
 
