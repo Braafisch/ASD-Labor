@@ -28,6 +28,16 @@ class ImageHandler:
         self.bridge = CvBridge()
         self.image_helper = SimulationImageHelper()
         self.Z_MEst = np.zeros((4, 1))
+        self.latest_canny_image = np.zeros((800, 800))
+        #  Select the region which might be interesting for detecting left
+        #  and right lane
+        self.max_range_m = 40
+        self.roi_right_line = np.array(
+            [[3, 0], [15, 0], [self.max_range_m, 3], [self.max_range_m, -5], [3, -5]]
+        )
+        self.roi_left_line = np.array(
+            [[3, 0], [15, 0], [self.max_range_m, -3], [self.max_range_m, 5], [3, 5]]
+        )
         # subscribers
         self.image_sub = rospy.Subscriber(
             "/prius/front_camera/image_raw", Image, self._callback, queue_size=1
@@ -54,83 +64,21 @@ class ImageHandler:
         )
 
     def _callback(self, message):
-        print("Enter callback function of Image Handler")
+        # print("Enter callback function of Image Handler")
         try:
             cv_image = self.bridge.imgmsg_to_cv2(message, "mono8")
         except CvBridgeError as e:
             rospy.logerr("Error in imageCallback: %s", e)
 
-        # detect lines
+        # Detect lines
         cv_image_color = cv2.cvtColor(cv_image, cv2.COLOR_GRAY2BGR)
-        height_image = cv_image_color.shape[0]
         #  Canny-Edge Detector
         canny_image = cv2.Canny(cv_image_color, 110, 200)
-        #  Convert detected edges, that are in image coordinates, to road coordinates.
-        pts_im = np.array([])
-        crop_idx = [int(height_image / 2), int(height_image * 0.74)]
-        canny_cropped = canny_image[crop_idx[0] : crop_idx[1], :]  # noqa:E203
-        for x, y in np.ndindex(canny_cropped.shape):
-            x += crop_idx[0]
-            if canny_image[x, y] == 255:
-                pts_im = np.append(pts_im, [y, x])
-        pts_im = pts_im.reshape((int(len(pts_im) / 2), 2))
-        pts_road = self.image_helper.image2road(pts_im)
-
-        #  Select the region which might be interesting for detecting left
-        #  and right lane
-        max_range_m = 40
-        roi_right_line = np.array(
-            [[3, 0], [15, 0], [max_range_m, 3], [max_range_m, -5], [3, -5]]
-        )
-        roi_left_line = np.array(
-            [[3, 0], [15, 0], [max_range_m, -3], [max_range_m, 5], [3, 5]]
-        )
-        lane_left = np.empty((0, 2))
-        lane_right = np.empty((0, 2))
-        for i in range(pts_road.shape[0]):
-            if (
-                cv2.pointPolygonTest(
-                    roi_left_line, (pts_road[i, 0], pts_road[i, 1]), False
-                )
-                > 0
-            ):
-                lane_left = np.vstack((lane_left, pts_road[i, :]))
-            if (
-                cv2.pointPolygonTest(
-                    roi_right_line, (pts_road[i, 0], pts_road[i, 1]), False
-                )
-                > 0
-            ):
-                lane_right = np.vstack((lane_right, pts_road[i, :]))
-
-        self.pub_dbg_pts_lane_left.publish(setMarker(lane_left, g=1))
-        self.pub_dbg_pts_lane_right.publish(setMarker(lane_right, b=1))
-
-        # initial estimate: straight road
-        Z_initial = np.array([5, -0.5, 0.3, 0]).T
-        # refine initial estimate via M-Estimator
-        if lane_left.size != 0 and lane_right.size != 0:
-            self.Z_MEst = self.MEstimator_lane_fit(
-                lane_left, lane_right, Z_initial, sigma=0.2, maxIteration=10
-            )
-            rospy.loginfo(
-                "lane coefficients: "
-                f"W={self.Z_MEst[0][0]}, "
-                f"Y_offset={self.Z_MEst[1][0]}m, "
-                f"dPhi={self.Z_MEst[2][0] * 180.0 / np.pi}deg, "
-                f"c0={self.Z_MEst[3][0]}"
-            )
-            x_pred, yl_pred, yr_pred = self.LS_lane_compute(
-                self.Z_MEst, max_range_m + 20, step=0.25
-            )
-            self.pub_dbg_pts_lane_left_pred.publish(setMarkerPred(x_pred, yl_pred, g=1))
-            self.pub_dbg_pts_lane_right_pred.publish(
-                setMarkerPred(x_pred, yr_pred, b=1)
-            )
+        self.latest_canny_image = canny_image
 
         # generate color image and draw box on road
-        roi_left_line_im = self.image_helper.road2image(roi_left_line)
-        roi_right_line_im = self.image_helper.road2image(roi_right_line)
+        roi_left_line_im = self.image_helper.road2image(self.roi_left_line)
+        roi_right_line_im = self.image_helper.road2image(self.roi_right_line)
         cv2.polylines(
             cv_image_color,
             [roi_left_line_im.astype(np.int32), roi_right_line_im.astype(np.int32)],
@@ -147,9 +95,65 @@ class ImageHandler:
         except CvBridgeError as e:
             rospy.logerr(e)
 
-        print("Exit callback function of Image Handler")
+        # print("Exit callback function of Image Handler")
 
-    def get_Z_MEst(self):
+    def estimate_lane(self, Z_initial):
+        #  Convert detected edges, that are in image coordinates, to road coordinates.
+        height_image = self.latest_canny_image.shape[0]
+        pts_im = np.array([])
+        crop_idx = np.array([height_image / 2, height_image * 0.74]).astype(int)
+        canny_cropped = np.array(
+            self.latest_canny_image[crop_idx[0] : crop_idx[1], :]  # noqa:E203
+        )
+        for x, y in np.ndindex(canny_cropped.shape):
+            x += crop_idx[0]
+            if self.latest_canny_image[x, y] == 255:
+                pts_im = np.append(pts_im, [y, x])
+        pts_im = pts_im.reshape((int(len(pts_im) / 2), 2))
+        pts_road = self.image_helper.image2road(pts_im)
+
+        #  Select the region which might be interesting for detecting left
+        #  and right lane
+        lane_left = np.empty((0, 2))
+        lane_right = np.empty((0, 2))
+        for i in range(pts_road.shape[0]):
+            if (
+                cv2.pointPolygonTest(
+                    self.roi_left_line, (pts_road[i, 0], pts_road[i, 1]), False
+                )
+                > 0
+            ):
+                lane_left = np.vstack((lane_left, pts_road[i, :]))
+            if (
+                cv2.pointPolygonTest(
+                    self.roi_right_line, (pts_road[i, 0], pts_road[i, 1]), False
+                )
+                > 0
+            ):
+                lane_right = np.vstack((lane_right, pts_road[i, :]))
+
+        self.pub_dbg_pts_lane_left.publish(setMarker(lane_left, g=1))
+        self.pub_dbg_pts_lane_right.publish(setMarker(lane_right, b=1))
+
+        # refine initial estimate via M-Estimator
+        if lane_left.size != 0 and lane_right.size != 0:
+            self.Z_MEst = self.MEstimator_lane_fit(
+                lane_left, lane_right, Z_initial, sigma=0.2, maxIteration=10
+            )
+            rospy.loginfo(
+                "lane coefficients: "
+                f"W={self.Z_MEst[0][0]}, "
+                f"Y_offset={self.Z_MEst[1][0]}m, "
+                f"dPhi={self.Z_MEst[2][0] * 180.0 / np.pi}deg, "
+                f"c0={self.Z_MEst[3][0]}"
+            )
+            x_pred, yl_pred, yr_pred = self.LS_lane_compute(
+                self.Z_MEst, self.max_range_m + 20, step=0.25
+            )
+            self.pub_dbg_pts_lane_left_pred.publish(setMarkerPred(x_pred, yl_pred, g=1))
+            self.pub_dbg_pts_lane_right_pred.publish(
+                setMarkerPred(x_pred, yr_pred, b=1)
+            )
         return self.Z_MEst
 
     def Cauchy(self, r, sigma=1):
@@ -179,7 +183,7 @@ class ImageHandler:
             maxIteration: max number of iterations
 
         Returns:
-            Z: lane coeffients (W, Y_offset, Delta_Phi, c0)
+            Z: lane coefficients (W, Y_offset, Delta_Phi, c0)
         """
         H = np.zeros((pL.shape[0] + pR.shape[0], 4))  # design matrix
         Y = np.zeros((pL.shape[0] + pR.shape[0], 1))  # noisy observations
@@ -202,11 +206,10 @@ class ImageHandler:
         for _ in range(0, maxIteration):
             Z0 = Z
             r = np.dot(H, Z) - Y
-            w = self.Cauchy(r, sigma)
-            K = np.diag(w[:, 0])
+            K = np.diag(self.Cauchy(r, sigma)[:, 0])
             H_inv = np.linalg.inv(np.linalg.multi_dot([H.T, K, H]))
             Z = np.linalg.multi_dot([H_inv, H.T, K, Y])
-            if np.allclose(Z, Z0, rtol=1e-2, atol=0):
+            if np.allclose(Z, Z0, rtol=1e-4, atol=0):
                 break
 
         return Z
@@ -288,6 +291,7 @@ if __name__ == "__main__":
 
     # setup image handler
     image_handler = ImageHandler()
+    Z_old = np.array([5, -0.5, 0.3, 0]).T
 
     # main loop
     time_start = rospy.Time(0)
@@ -295,15 +299,15 @@ if __name__ == "__main__":
         time_now = rospy.get_rostime()
         if time_start == rospy.Time(0):
             time_start = time_now
-        print("Enter loop")
+
+        Z_MEst = image_handler.estimate_lane(Z_initial=Z_old)
         lane_coeff = LaneCoefficients()
         lane_coeff.header = Header()
-        Z_MEst = image_handler.get_Z_MEst()
         lane_coeff.W = Z_MEst[0][0]
         lane_coeff.Y_offset = Z_MEst[1][0]
         lane_coeff.dPhi = Z_MEst[2][0]
         lane_coeff.c0 = Z_MEst[3][0]
-
         lane_coeff_pub.publish(lane_coeff)
+        Z_old = Z_MEst
 
         rate.sleep()
