@@ -24,7 +24,6 @@ class ImageHandler:
     A class to subscribe to an image and create and publish a debug image.
     """
 
-    # TODO: replace handler behavior with proper trajectory planning
     def __init__(self):
         self.bridge = CvBridge()
         self.image_helper = SimulationImageHelper()
@@ -63,19 +62,22 @@ class ImageHandler:
 
         # detect lines
         cv_image_color = cv2.cvtColor(cv_image, cv2.COLOR_GRAY2BGR)
-        cv2.imwrite("cv_im_color.jpg", cv_image_color)
+        height_image = cv_image_color.shape[0]
         #  Canny-Edge Detector
         canny_image = cv2.Canny(cv_image_color, 110, 200)
-        cv2.imwrite("canny_image.jpg", canny_image)
         #  Convert detected edges, that are in image coordinates, to road coordinates.
         pts_im = np.array([])
-        for x, y in np.ndindex(canny_image.shape):
+        crop_idx = [int(height_image / 2), int(height_image * 0.74)]
+        canny_cropped = canny_image[crop_idx[0] : crop_idx[1], :]  # noqa:E203
+        for x, y in np.ndindex(canny_cropped.shape):
+            x += crop_idx[0]
             if canny_image[x, y] == 255:
                 pts_im = np.append(pts_im, [y, x])
         pts_im = pts_im.reshape((int(len(pts_im) / 2), 2))
         pts_road = self.image_helper.image2road(pts_im)
 
-        #  Select the region which might be interesting for the lane detection.
+        #  Select the region which might be interesting for detecting left
+        #  and right lane
         max_range_m = 40
         roi_right_line = np.array(
             [[3, 0], [15, 0], [max_range_m, 3], [max_range_m, -5], [3, -5]]
@@ -85,7 +87,6 @@ class ImageHandler:
         )
         lane_left = np.empty((0, 2))
         lane_right = np.empty((0, 2))
-
         for i in range(pts_road.shape[0]):
             if (
                 cv2.pointPolygonTest(
@@ -105,8 +106,29 @@ class ImageHandler:
         self.pub_dbg_pts_lane_left.publish(setMarker(lane_left, g=1))
         self.pub_dbg_pts_lane_right.publish(setMarker(lane_right, b=1))
 
+        # initial estimate: straight road
+        Z_initial = np.array([5, -0.5, 0.3, 0]).T
+        # refine initial estimate via M-Estimator
+        if lane_left.size != 0 and lane_right.size != 0:
+            self.Z_MEst = self.MEstimator_lane_fit(
+                lane_left, lane_right, Z_initial, sigma=0.2, maxIteration=10
+            )
+            rospy.loginfo(
+                "lane coefficients: "
+                f"W={self.Z_MEst[0][0]}, "
+                f"Y_offset={self.Z_MEst[1][0]}m, "
+                f"dPhi={self.Z_MEst[2][0] * 180.0 / np.pi}deg, "
+                f"c0={self.Z_MEst[3][0]}"
+            )
+            x_pred, yl_pred, yr_pred = self.LS_lane_compute(
+                self.Z_MEst, max_range_m + 20, step=0.25
+            )
+            self.pub_dbg_pts_lane_left_pred.publish(setMarkerPred(x_pred, yl_pred, g=1))
+            self.pub_dbg_pts_lane_right_pred.publish(
+                setMarkerPred(x_pred, yr_pred, b=1)
+            )
+
         # generate color image and draw box on road
-        cv_image_color = cv2.cvtColor(cv_image, cv2.COLOR_GRAY2BGR)
         roi_left_line_im = self.image_helper.road2image(roi_left_line)
         roi_right_line_im = self.image_helper.road2image(roi_right_line)
         cv2.polylines(
@@ -116,10 +138,8 @@ class ImageHandler:
             color=(0, 0, 255),
             thickness=8,
         )
-
         # downscale to reduce load
         cv_image_color = cv2.pyrDown(cv_image_color)
-
         try:
             self.pub_dbg_image.publish(
                 self.bridge.cv2_to_imgmsg(cv_image_color, "bgr8")
@@ -127,18 +147,6 @@ class ImageHandler:
         except CvBridgeError as e:
             rospy.logerr(e)
 
-        # initial estimate: straight road
-        Z_initial = np.array([5, -0.5, 0.3, 0]).T
-
-        # refine initial estimate via M-Estimator
-        self.Z_MEst = self.MEstimator_lane_fit(
-            lane_left, lane_right, Z_initial, sigma=0.2, maxIteration=10
-        )
-        x_pred, yl_pred, yr_pred = LS_lane_compute(
-            self.Z_MEst, max_range_m + 20, step=0.25
-        )
-        self.pub_dbg_pts_lane_left_pred.publish(setMarkerPred(x_pred, yl_pred, g=1))
-        self.pub_dbg_pts_lane_right_pred.publish(setMarkerPred(x_pred, yr_pred, b=1))
         print("Exit callback function of Image Handler")
 
     def get_Z_MEst(self):
@@ -149,7 +157,7 @@ class ImageHandler:
         Cauchy loss function.
 
         Args:
-            r: resiudals
+            r: residuals
             sigma: expected standard deviation of inliers
 
         Returns:
@@ -161,7 +169,7 @@ class ImageHandler:
 
     def MEstimator_lane_fit(self, pL, pR, Z_initial, sigma=1, maxIteration=10):
         """
-        M-Estimator for lane coeffients z=(W, Y_offset, Delta_Phi, c0)^T.
+        M-Estimator for lane coefficients z=(W, Y_offset, Delta_Phi, c0)^T.
 
         Args:
             pL: [NL, 2]-array of left marking positions (in DIN70000)
@@ -173,7 +181,6 @@ class ImageHandler:
         Returns:
             Z: lane coeffients (W, Y_offset, Delta_Phi, c0)
         """
-
         H = np.zeros((pL.shape[0] + pR.shape[0], 4))  # design matrix
         Y = np.zeros((pL.shape[0] + pR.shape[0], 1))  # noisy observations
 
@@ -193,45 +200,47 @@ class ImageHandler:
 
         Z = Z_initial
         for _ in range(0, maxIteration):
+            Z0 = Z
             r = np.dot(H, Z) - Y
             w = self.Cauchy(r, sigma)
             K = np.diag(w[:, 0])
             H_inv = np.linalg.inv(np.linalg.multi_dot([H.T, K, H]))
             Z = np.linalg.multi_dot([H_inv, H.T, K, Y])
+            if np.allclose(Z, Z0, rtol=1e-2, atol=0):
+                break
 
         return Z
 
+    def LS_lane_compute(self, Z, maxDist=60, step=0.5):
+        """
+        Compute lane points from given parameter vector.
 
-def LS_lane_compute(Z, maxDist=60, step=0.5):
-    """
-    Compute lane points from given parameter vector.
+        Args;
+            Z: lane coefficients (W, Y_offset, Delta_Phi, c0)
+            maxDist[=60]: distance up to which lane shall be computed
+            step[=0.5]: step size in x-direction (in m)
 
-    Args;
-        Z: lane coeffients (W, Y_offset, Delta_Phi, c0)
-        maxDist[=60]: distance up to which lane shall be computed
-        step[=0.5]: step size in x-direction (in m)
+        Returns:
+            (x_pred, yl_pred, yr_pred): x- and y-positions of left and
+                right lane points
+        """
+        x_pred = np.arange(0, maxDist, step)
+        yl_pred = np.zeros_like(x_pred)
+        yr_pred = np.zeros_like(x_pred)
 
-    Returns:
-        (x_pred, yl_pred, yr_pred): x- and y-positions of left and
-            right lane points
-    """
-    x_pred = np.arange(0, maxDist, step)
-    yl_pred = np.zeros_like(x_pred)
-    yr_pred = np.zeros_like(x_pred)
+        for i in range(x_pred.shape[0]):
+            u = x_pred[i]
+            u2 = u * u
+            yl_pred[i] = np.dot(np.array([0.5, -1, -u, 1.0 / 2.0 * u2]), Z)
+            yr_pred[i] = np.dot(np.array([-0.5, -1, -u, 1.0 / 2.0 * u2]), Z)
 
-    for i in range(x_pred.shape[0]):
-        u = x_pred[i]
-        u2 = u * u
-        yl_pred[i] = np.dot(np.array([0.5, -1, -u, 1.0 / 2.0 * u2]), Z)
-        yr_pred[i] = np.dot(np.array([-0.5, -1, -u, 1.0 / 2.0 * u2]), Z)
-
-    return (x_pred, yl_pred, yr_pred)
+        return (x_pred, yl_pred, yr_pred)
 
 
 def setMarker(lane, g=0, b=0):
     ptsMarker = Marker()
     ptsMarker.header = Header()
-    ptsMarker.header.frame_id = "base_link"
+    ptsMarker.header.frame_id = "din70000"
     ptsMarker.id = 0
     ptsMarker.type = Marker.POINTS
     ptsMarker.scale.x = 0.1
@@ -251,7 +260,7 @@ def setMarker(lane, g=0, b=0):
 def setMarkerPred(x, y, g=0, b=0):
     ptsMarker = Marker()
     ptsMarker.header = Header()
-    ptsMarker.header.frame_id = "base_link"
+    ptsMarker.header.frame_id = "din70000"
     ptsMarker.id = 0
     ptsMarker.type = Marker.POINTS
     ptsMarker.scale.x = 0.1
@@ -286,7 +295,7 @@ if __name__ == "__main__":
         time_now = rospy.get_rostime()
         if time_start == rospy.Time(0):
             time_start = time_now
-
+        print("Enter loop")
         lane_coeff = LaneCoefficients()
         lane_coeff.header = Header()
         Z_MEst = image_handler.get_Z_MEst()
