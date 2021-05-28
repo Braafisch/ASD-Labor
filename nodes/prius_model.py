@@ -1,6 +1,5 @@
 import numpy as np
 from rospy import rostime
-from scipy.integrate import odeint
 from sensor_msgs.msg import JointState
 import message_filters
 
@@ -56,7 +55,7 @@ class Prius_State:
         joint_state = self.jointStateCache.getInterval(
             rostime.Time.from_sec(self.t), time_now
         )
-        if joint_state != None:
+        if joint_state is not None:
             if len(joint_state) > 0:
                 t, v, delta = self.v_get_velocity_and_steer(joint_state)
                 time_now = time_now.to_sec()

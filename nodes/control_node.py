@@ -6,7 +6,6 @@ The task of this node is to move the vehicle along the planned trajectory.
 """
 
 import rospy
-from rospy import rostime
 import std_msgs.msg
 import tf
 import numpy as np
@@ -27,7 +26,7 @@ class TrajectoryHandler:
         self.steer = 0
         self.prius = prius
         self.trajec = None
-        last_target_idx = None
+        self.last_target_idx = None
 
         # subscribe to lane coefficient updates
         self.trajectory_sub = rospy.Subscriber(
@@ -83,34 +82,32 @@ class TrajectoryHandler:
 
         # make sure that we never match a point on the desired path
         # that we already passed earlier:
-        if last_target_idx >= current_target_idx:
+        if last_target_idx is not None and last_target_idx >= current_target_idx:
             current_target_idx = last_target_idx
 
-        ## INSERT CODE HERE
         delta = normalize_angle(cyaw[current_target_idx] - state.yaw) + np.arctan2(
             -self.k * error_front_axle, state.v
         )
 
-        ## END INSERTED CODE
-
         return delta, current_target_idx, error_front_axle
 
     def calculate_control(self):
-        di, self.last_target_idx, _ = self.stanley_control(
-            state=self.prius,
-            cx=self.trajec.x,
-            cy=self.trajec.y,
-            cyaw=self.trajec.theta,
-            last_target_idx=self.last_target_idx,
-        )
+        if self.trajec is not None:
+            di, self.last_target_idx, _ = self.stanley_control(
+                state=self.prius,
+                cx=self.trajec.x,
+                cy=self.trajec.y,
+                cyaw=self.trajec.theta,
+                last_target_idx=self.last_target_idx,
+            )
 
-        self.steer = di / np.radians(30.0)
-        if self.trajec.v[self.last_target_idx] > self.prius.v:
-            self.throttle = 1.0
-            self.brake = 0
-        else:
-            self.brake = 1.0
-            self.throttle = 0
+            self.steer = di / np.radians(30.0)
+            if self.trajec.v[self.last_target_idx] > self.prius.v:
+                self.throttle = 0.2
+                self.brake = 0
+            else:
+                self.brake = 0.5
+                self.throttle = 0
 
     def get_control(self):
         return self.throttle, self.brake, self.steer
@@ -128,11 +125,12 @@ class TrajectoryHandler:
         )
 
         self.trajec = message
+        self.prius = Prius_State()
 
 
 if __name__ == "__main__":
     rospy.init_node("control_node")
-    rate = rospy.Rate(1.0)
+    rate = rospy.Rate(1000.0)
 
     # subscribers
     tf_listener = tf.TransformListener()
