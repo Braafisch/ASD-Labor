@@ -209,9 +209,17 @@ class ImageHandler:
             K = np.diag(self.Cauchy(r, sigma)[:, 0])
             H_inv = np.linalg.inv(np.linalg.multi_dot([H.T, K, H]))
             Z = np.linalg.multi_dot([H_inv, H.T, K, Y])
-            if np.allclose(Z, Z0, rtol=1e-4, atol=0):
+            if np.all(
+                [
+                    np.isclose(Z[0][0], Z0[0], atol=3e-1),  # Lane Width[m]
+                    np.isclose(Z[1][0], Z0[1], atol=4e-2),  # Lateral offset[m]
+                    np.isclose(
+                        Z[2][0], Z0[2], atol=5e-2
+                    ),  # relative angle to lane[rad]
+                    np.isclose(Z[3][0], Z0[3], atol=1e-2),  # Parabola coefficient[1]
+                ]
+            ):
                 break
-
         return Z
 
     def LS_lane_compute(self, Z, maxDist=60, step=0.5):
