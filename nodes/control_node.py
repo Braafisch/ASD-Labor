@@ -6,15 +6,13 @@ The task of this node is to move the vehicle along the planned trajectory.
 """
 
 import rospy
+from rospy import rostime
 import std_msgs.msg
-from sensor_msgs.msg import JointState
-import message_filters
 import tf
 import numpy as np
 
 from car_demo.msg import Control, Trajectory
-
-# from vehicle_model import State, normalize_angle, veh_dim_x, veh_dim_y, L
+from prius_model import Prius_State, L, normalize_angle
 
 
 class TrajectoryHandler:
@@ -22,52 +20,100 @@ class TrajectoryHandler:
     A class to subscribe to trajectory updates and print received data.
     """
 
-    def __init__(self):
+    def __init__(self, prius: Prius_State):
         self.k = 0.7
         self.throttle = 0
         self.brake = 0
         self.steer = 0
-        self.jointStateSub = message_filters.Subscriber("joint_states", JointState)
-        self.jointStateCache = message_filters.Cache(self.jointStateSub, 100)
+        self.prius = prius
+        self.trajec = None
+        last_target_idx = None
+
         # subscribe to lane coefficient updates
         self.trajectory_sub = rospy.Subscriber(
             "trajectory", Trajectory, self._callback, queue_size=1
         )
 
-    def get_velocity(self):
-        # get vehicle joint data
-        joint_state = self.jointStateCache.getElemBeforeTime(rospy.get_rostime())
-        joint_state_dict = dict(zip(joint_state.name, joint_state.velocity))
-        r_wheel = 0.31265
-        v = (
-            0.25
-            * (
-                joint_state_dict["front_right_wheel_joint"]
-                + joint_state_dict["rear_left_wheel_joint"]
-                + joint_state_dict["front_left_wheel_joint"]
-                + joint_state_dict["rear_right_wheel_joint"]
-            )
-            * r_wheel
-        )
-        rospy.loginfo("v = " + str(v))
-        return v
+    def calc_target_index(self, state, cx, cy, cyaw):
+        """
+        Compute index in the trajectory list of the target.
 
-    def calculate_control(self, v, trajec):
-        ai = trajec.v[0] - v
+        :param state: (State object)
+        :param cx: [m] x-coordinates of (sampled) desired trajectory
+        :param cy: [m] y-coordinates of (sampled) desired trajectory
+        :param cyaw: [rad] tangent angle of (sampled) desired trajectory
+        :return: (int, float)
+        """
+        # Calc front axle position
+        fx = state.x + 0.5 * L * np.cos(state.yaw)
+        fy = state.y + 0.5 * L * np.sin(state.yaw)
 
-        dx_vec = 1.35 - np.asarray(trajec.x).reshape([-1, 1])
-        assert dx_vec.shape == (len(dx_vec), 1)
-        dy_vec = -np.asarray(trajec.y).reshape([-1, 1])
-        assert dy_vec.shape == (len(dy_vec), 1)
+        # Search nearest point index
+        dx_vec = fx - np.asarray(cx).reshape([-1, 1])
+        dy_vec = fy - np.asarray(cy).reshape([-1, 1])
         dist = np.hstack([dx_vec, dy_vec])
-        front_axle_vec = [
-            np.cos(trajec.theta[0] + np.pi / 2),
-            np.sin(trajec.theta[0] + np.pi / 2),
-        ]
-        error_front_axle = np.dot(dist[0, :], front_axle_vec)
+        dist_2 = np.sum(dist ** 2, axis=1)
+        target_idx = np.argmin(dist_2)
 
-        de = trajec.theta[0] + np.arctan2(-self.k * error_front_axle, v)
-        return ai, de
+        # Project RMS error onto front axle vector
+        front_axle_vec = [
+            np.cos(cyaw[target_idx] + np.pi / 2),
+            np.sin(cyaw[target_idx] + np.pi / 2),
+        ]
+        error_front_axle = np.dot(dist[target_idx, :], front_axle_vec)
+
+        return target_idx, error_front_axle
+
+    def stanley_control(self, state, cx, cy, cyaw, last_target_idx):
+        """
+        Stanley steering control.
+
+        :param state: (State object)
+        :param cx: [m] x-coordinates of (sampled) desired trajectory
+        :param cy: [m] y-coordinates of (sampled) desired trajectory
+        :param cyaw: [rad] orientation of (sampled) desired trajectory
+        :param last_target_idx: [int] last visited point on desired trajectory
+        :return: ([rad] steering angle,
+            [int] last visited point on desired trajectory,
+            [m] cross track error at front axle)
+        """
+        current_target_idx, error_front_axle = self.calc_target_index(
+            state, cx, cy, cyaw
+        )
+
+        # make sure that we never match a point on the desired path
+        # that we already passed earlier:
+        if last_target_idx >= current_target_idx:
+            current_target_idx = last_target_idx
+
+        ## INSERT CODE HERE
+        delta = normalize_angle(cyaw[current_target_idx] - state.yaw) + np.arctan2(
+            -self.k * error_front_axle, state.v
+        )
+
+        ## END INSERTED CODE
+
+        return delta, current_target_idx, error_front_axle
+
+    def calculate_control(self):
+        di, self.last_target_idx, _ = self.stanley_control(
+            state=self.prius,
+            cx=self.trajec.x,
+            cy=self.trajec.y,
+            cyaw=self.trajec.theta,
+            last_target_idx=self.last_target_idx,
+        )
+
+        self.steer = di / np.radians(30.0)
+        if self.trajec.v[self.last_target_idx] > self.prius.v:
+            self.throttle = 1.0
+            self.brake = 0
+        else:
+            self.brake = 1.0
+            self.throttle = 0
+
+    def get_control(self):
+        return self.throttle, self.brake, self.steer
 
     def _callback(self, message: Trajectory):
 
@@ -81,18 +127,7 @@ class TrajectoryHandler:
             f"s={str(message.s)}"
         )
 
-        a, delta = self.calculate_control(self.get_velocity(), message)
-        if a >= 0:
-            self.throttle = 1.0
-            self.brake = 0
-        else:
-            self.brake = 1.0
-            self.throttle = 0
-        self.steer = 3 * delta / np.pi
-        rospy.loginfo("steer = " + str(self.steer))
-
-    def get_control(self):
-        return self.throttle, self.brake, self.steer
+        self.trajec = message
 
 
 if __name__ == "__main__":
@@ -105,8 +140,11 @@ if __name__ == "__main__":
     # publishers
     control_pub = rospy.Publisher("prius", Control, queue_size=1)
 
+    # create prius state
+    prius = Prius_State()
+
     # setup lane coefficients handler
-    trajectory_handler = TrajectoryHandler()
+    trajectory_handler = TrajectoryHandler(prius)
 
     # main loop
     time_start = rospy.Time(0)
@@ -115,7 +153,8 @@ if __name__ == "__main__":
         if time_start == rospy.Time(0):
             time_start = time_now
 
-        # TODO: fill message object with proper values
+        prius.update_from_joint(time_now)
+        trajectory_handler.calculate_control()
         control = Control()
         control.header = std_msgs.msg.Header()
         (
