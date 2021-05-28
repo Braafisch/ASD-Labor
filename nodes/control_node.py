@@ -10,8 +10,12 @@ import std_msgs.msg
 import tf
 import numpy as np
 
+from geometry_msgs.msg import Point, Vector3, Quaternion
+from std_msgs.msg import ColorRGBA, Header
+from visualization_msgs.msg import Marker
+
 from car_demo.msg import Control, Trajectory
-from prius_model import Prius_State, L, normalize_angle
+from prius_model import Prius_State, L, normalize_angle, veh_dim_x, veh_dim_y, max_steer
 
 
 class TrajectoryHandler:
@@ -32,6 +36,8 @@ class TrajectoryHandler:
         self.trajectory_sub = rospy.Subscriber(
             "trajectory", Trajectory, self._callback, queue_size=1
         )
+
+        self.control_dbg_pub = rospy.Publisher("control_dbg", Marker, queue_size=1)
 
     def calc_target_index(self, state, cx, cy, cyaw):
         """
@@ -100,10 +106,17 @@ class TrajectoryHandler:
                 cyaw=self.trajec.theta,
                 last_target_idx=self.last_target_idx,
             )
-
+            marker = create_debug_marker(
+                101,
+                self.trajec.x[self.last_target_idx],
+                self.trajec.y[self.last_target_idx],
+            )
+            self.control_dbg_pub.publish(marker)
+            ai = self.trajec.v[self.last_target_idx] - self.prius.v
+            di = np.clip(di, -max_steer, max_steer)
             self.steer = di / np.radians(30.0)
-            if self.trajec.v[self.last_target_idx] > self.prius.v:
-                self.throttle = 0.2
+            if ai >= 0:
+                self.throttle = 0.01
                 self.brake = 0
             else:
                 self.brake = 0.5
@@ -125,12 +138,27 @@ class TrajectoryHandler:
         )
 
         self.trajec = message
-        self.prius = Prius_State()
+        self.prius.x = veh_dim_x
+        self.prius.y = veh_dim_y
+        self.last_target_idx = 0
+
+
+def create_debug_marker(id: int, x: float, y: float, size: float = 5) -> Marker:
+    marker = Marker()
+    marker.header = std_msgs.msg.Header()
+    marker.header.frame_id = "base_link"
+    marker.id = id
+    marker.action = Marker.ADD
+    marker.type = Marker.CUBE
+    marker.pose.position = Point(x=x, y=y)
+    marker.color = ColorRGBA(r=1, g=1, b=0, a=1)
+    marker.scale = Vector3(x=size * 0.1, y=size * 0.1, z=size * 0.1)
+    return marker
 
 
 if __name__ == "__main__":
     rospy.init_node("control_node")
-    rate = rospy.Rate(1000.0)
+    rate = rospy.Rate(50.0)
 
     # subscribers
     tf_listener = tf.TransformListener()
@@ -139,7 +167,7 @@ if __name__ == "__main__":
     control_pub = rospy.Publisher("prius", Control, queue_size=1)
 
     # create prius state
-    prius = Prius_State()
+    prius = Prius_State(x=veh_dim_x, y=veh_dim_y)
 
     # setup lane coefficients handler
     trajectory_handler = TrajectoryHandler(prius)
