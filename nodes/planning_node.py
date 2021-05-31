@@ -73,7 +73,10 @@ class TrafficLightHandler:
 
 
 def create_trajectory(
-    lane_coeff: LaneCoefficients, max_dist: float = 50, step: float = 0.5
+    lane_coeff: LaneCoefficients,
+    tf_listener: tf.TransformListener,
+    max_dist: float = 50,
+    step: float = 0.5,
 ) -> Trajectory:
     x = np.arange(0, max_dist, step)
     y = np.empty_like(x)
@@ -83,7 +86,11 @@ def create_trajectory(
         u2 = u ** 2
         y[i] = np.dot(np.array([0, -1, -u, 0.5 * u2]), Z)
 
-    delta = np.diff(np.column_stack((x, y)), axis=0)
+    tran_mat = tf_listener.asMatrix("map", lane_coeff.header)
+    xyzw = np.column_stack((x, y, np.zeros_like(x), np.ones_like(x)))
+    trans_xy = np.dot(xyzw, tran_mat.T)[:, :2]
+
+    delta = np.diff(trans_xy, axis=0)
     theta = np.pad(np.arctan2(delta[:, 1], delta[:, 0]), pad_width=(0, 1), mode="edge")
     c = np.pad(np.diff(theta) / step, pad_width=(0, 1), mode="edge")
     velocity = np.full_like(x, 3)  # static velocity
@@ -91,9 +98,9 @@ def create_trajectory(
 
     trajectory = Trajectory()
     trajectory.header = lane_coeff.header
-    trajectory.header.frame_id = "base_link"
-    trajectory.x = tuple(x)
-    trajectory.y = tuple(y)
+    trajectory.header.frame_id = "map"
+    trajectory.x = tuple(trans_xy[:, 0])
+    trajectory.y = tuple(trans_xy[:, 1])
     trajectory.theta = tuple(theta)
     trajectory.c = tuple(c)
     trajectory.v = tuple(velocity)
@@ -149,9 +156,19 @@ if __name__ == "__main__":
             if not first_lane_coeff_recvd:
                 rospy.loginfo("First lane coefficients received.")
                 first_lane_coeff_recvd = True
-            trajectory = create_trajectory(
-                lane_coeff, max_dist=MAX_DIST, step=STEP_SIZE
-            )
+
+            try:
+                trajectory = create_trajectory(
+                    lane_coeff, tf_listener, max_dist=MAX_DIST, step=STEP_SIZE
+                )
+            except (
+                tf.LookupException,
+                tf.ConnectivityException,
+                tf.ExtrapolationException,
+            ) as e:
+                rospy.logerr(f"Failed to transform coordinates: {e}")
+                continue
+
             trajectory_pub.publish(trajectory)
 
             marker_array = MarkerArray()
@@ -166,4 +183,7 @@ if __name__ == "__main__":
 
             trajectory_dbg_pub.publish(marker_array)
 
-        rate.sleep()
+        try:
+            rate.sleep()
+        except rospy.exceptions.ROSInterruptException as e:
+            rospy.logdebug(f"Stopping {rospy.get_name()}, because of interrupt: {e}")
