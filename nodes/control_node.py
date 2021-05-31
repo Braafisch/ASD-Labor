@@ -28,6 +28,7 @@ class TrajectoryHandler:
         self.throttle = 0
         self.brake = 0
         self.steer = 0
+        self.gear = Control.NO_COMMAND
         self.prius = prius
         self.trajec = None
         self.last_target_idx = None
@@ -123,7 +124,7 @@ class TrajectoryHandler:
                 self.throttle = 0
 
     def get_control(self):
-        return self.throttle, self.brake, self.steer
+        return self.throttle, self.brake, self.steer, self.gear
 
     def _callback(self, message: Trajectory):
 
@@ -138,9 +139,8 @@ class TrajectoryHandler:
         )
 
         self.trajec = message
-        self.prius.x = veh_dim_x
-        self.prius.y = veh_dim_y
         self.last_target_idx = 0
+        self.gear = Control.FORWARD
 
 
 def create_debug_marker(id: int, x: float, y: float, size: float = 5) -> Marker:
@@ -178,8 +178,16 @@ if __name__ == "__main__":
         time_now = rospy.get_rostime()
         if time_start == rospy.Time(0):
             time_start = time_now
-
-        prius.update_from_joint(time_now)
+        try:
+            prius.update(time_now)
+        except (
+            tf.LookupException,
+            tf.ConnectivityException,
+            tf.ExtrapolationException,
+        ):
+            rospy.loginfo("Could not receive information!")
+            rate.sleep()
+            continue
         trajectory_handler.calculate_control()
         control = Control()
         control.header = std_msgs.msg.Header()
@@ -187,8 +195,8 @@ if __name__ == "__main__":
             control.throttle,
             control.brake,
             control.steer,
+            control.shift_gears,
         ) = trajectory_handler.get_control()
-        control.shift_gears = Control.FORWARD
 
         control_pub.publish(control)
 

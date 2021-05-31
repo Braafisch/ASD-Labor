@@ -1,5 +1,7 @@
 import numpy as np
+import rospy
 from rospy import rostime
+import tf
 from sensor_msgs.msg import JointState
 import message_filters
 
@@ -15,10 +17,11 @@ def normalize_angle(angle):
 
 
 class Prius_State:
-    def __init__(self, x=0.0, y=0.0, yaw=0.0, v=0.0, t=0.0):
+    def __init__(self, x=0.0, y=0.0, yaw=0.0, v=0.0, t=None):
         """Instantiate the object."""
         self.jointStateSub = message_filters.Subscriber("joint_states", JointState)
         self.jointStateCache = message_filters.Cache(self.jointStateSub, 100)
+        self.tf_listener = tf.TransformListener()
         self.x = x
         self.y = y
         self.yaw = yaw
@@ -28,44 +31,47 @@ class Prius_State:
         self.beta = 0
         self.dyaw_dt = 0
 
-    def get_velocity_and_steer(joint_state_2):
-        joint_state_dict_v = dict(zip(joint_state_2.name, joint_state_2.velocity))
-        joint_state_dict_pos = dict(zip(joint_state_2.name, joint_state_2.position))
-
-        t = joint_state_2.header.stamp.to_sec()
-        v = (
-            0.25
-            * (
-                joint_state_dict_v["front_right_wheel_joint"]
-                + joint_state_dict_v["rear_left_wheel_joint"]
-                + joint_state_dict_v["front_left_wheel_joint"]
-                + joint_state_dict_v["rear_right_wheel_joint"]
-            )
-            * r_wheel
-            * 3.6
-        )
-
-        steer = joint_state_dict_pos["steering_joint"] / 7.85 * max_steer
-
-        return t, v, steer
-
-    v_get_velocity_and_steer = np.vectorize(get_velocity_and_steer)
-
-    def update_from_joint(self, time_now):
-        joint_state = self.jointStateCache.getInterval(
-            rostime.Time.from_sec(self.t), time_now
-        )
+    def get_velocity(self):
+        joint_state = self.jointStateCache.getElemBeforeTime(self.t)
         if joint_state is not None:
-            if len(joint_state) > 0:
-                t, v, delta = self.v_get_velocity_and_steer(joint_state)
-                time_now = time_now.to_sec()
-                delta = np.clip(delta, -max_steer, max_steer)
+            joint_state_dict_v = dict(zip(joint_state.name, joint_state.velocity))
 
-                t = np.diff(np.insert(t, 0, self.t))
-                s = v * t
+            v = (
+                0.25
+                * (
+                    joint_state_dict_v["front_right_wheel_joint"]
+                    + joint_state_dict_v["rear_left_wheel_joint"]
+                    + joint_state_dict_v["front_left_wheel_joint"]
+                    + joint_state_dict_v["rear_right_wheel_joint"]
+                )
+                * r_wheel
+            )
 
-                self.y = self.y + sum(np.sin(delta) * s)
-                self.x = self.x + sum(np.cos(delta) * s)
-                self.v = v[-1]
-                self.yaw = delta[-1]
-                self.t = time_now
+            return v
+        else:
+            return self.v
+
+    def get_postion(self):
+        # get vehicle position data
+        try:
+            (trans, rot) = self.tf_listener.lookupTransform(
+                "map", "din70000", rospy.Time(0)
+            )  # get latest trafo between world and vehicle
+            rpy = tf.transformations.euler_from_quaternion(rot)
+            rospy.loginfo(
+                "pos: T=[%.1f, %.1f, %.1f], rpy=[%.1f, %.1f, %.1f]"
+                % (trans[0], trans[1], trans[2], rpy[0], rpy[1], rpy[2])
+            )
+            return trans[0], trans[1], rpy[2]
+        except (
+            tf.LookupException,
+            tf.ConnectivityException,
+            tf.ExtrapolationException,
+        ):
+            rospy.loginfo("Could not receive position information!")
+            return self.x, self.y, self.yaw
+
+    def update(self,time_now):
+        self.t = time_now
+        self.x, self.y, self.yaw = self.get_postion()
+        self.v = self.get_velocity()
