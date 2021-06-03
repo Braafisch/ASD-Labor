@@ -105,10 +105,11 @@ class ImageHandler:
         canny_cropped = np.array(
             self.latest_canny_image[crop_idx[0] : crop_idx[1], :]  # noqa:E203
         )
-        for x, y in np.ndindex(canny_cropped.shape):
+        for x in range(0, len(canny_cropped), 5):
             x += crop_idx[0]
-            if self.latest_canny_image[x, y] == 255:
-                pts_im = np.append(pts_im, [y, x])
+            for y in range(0, len(canny_cropped[0]), 2):
+                if self.latest_canny_image[x, y] == 255:
+                    pts_im = np.append(pts_im, [y, x])
         pts_im = pts_im.reshape((int(len(pts_im) / 2), 2))
         pts_road = self.image_helper.image2road(pts_im)
 
@@ -136,7 +137,7 @@ class ImageHandler:
         self.pub_dbg_pts_lane_right.publish(setMarker(lane_right, b=1))
 
         # refine initial estimate via M-Estimator
-        if lane_left.size != 0 and lane_right.size != 0:
+        if lane_left.size > 2 and lane_right.size > 2:
             self.Z_MEst = self.MEstimator_lane_fit(
                 lane_left, lane_right, Z_initial, sigma=0.2, maxIteration=10
             )
@@ -247,6 +248,25 @@ class ImageHandler:
 
         return (x_pred, yl_pred, yr_pred)
 
+    def Z_next_initial_limit(self):
+
+        # Max of W (lane width) is 5m
+        W_min = 0.0
+        W_max = 5.0
+        np.clip(self.Z_MEst[0][0], W_min, W_max)
+
+        # Range of Y_offset is from -2m to 2m
+        Yo_min = -2.5
+        Yo_max = 2.5
+        np.clip(self.Z_MEst[1][0], Yo_min, Yo_max)
+
+        # Range of dPhi from -70 degrees to +70 degrees
+        dPhi_min = -45 * np.pi / 180.0
+        dPhi_max = 45 * np.pi / 180.0
+        np.clip(self.Z_MEst[2][0], dPhi_min, dPhi_max)
+
+        return self.Z_MEst
+
 
 def setMarker(lane, g=0, b=0):
     ptsMarker = Marker()
@@ -290,7 +310,7 @@ def setMarkerPred(x, y, g=0, b=0):
 
 if __name__ == "__main__":
     rospy.init_node("sensing_node")
-    rate = rospy.Rate(1.0)
+    rate = rospy.Rate(6.0)
 
     # publishers
     lane_coeff_pub = rospy.Publisher(
@@ -316,6 +336,6 @@ if __name__ == "__main__":
         lane_coeff.dPhi = Z_MEst[2][0]
         lane_coeff.c0 = Z_MEst[3][0]
         lane_coeff_pub.publish(lane_coeff)
-        Z_old = Z_MEst
+        Z_old = image_handler.Z_next_initial_limit()
 
         rate.sleep()
