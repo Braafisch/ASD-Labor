@@ -310,7 +310,7 @@ def setMarkerPred(x, y, g=0, b=0):
 
 if __name__ == "__main__":
     rospy.init_node("sensing_node")
-    rate = rospy.Rate(6.0)
+    # rate = rospy.Rate(10.0)
 
     # publishers
     lane_coeff_pub = rospy.Publisher(
@@ -338,4 +338,4 @@ if __name__ == "__main__":
         lane_coeff_pub.publish(lane_coeff)
         Z_old = image_handler.Z_next_initial_limit()
 
-        rate.sleep()
+        # rate.sleep()
