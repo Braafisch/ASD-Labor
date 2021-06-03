@@ -321,6 +321,8 @@ if __name__ == "__main__":
     image_handler = ImageHandler()
     Z_old = np.array([5, -0.5, 0.3, 0]).T
 
+    seq = 0
+
     # main loop
     time_start = rospy.Time(0)
     while not rospy.is_shutdown():
@@ -328,9 +330,14 @@ if __name__ == "__main__":
         if time_start == rospy.Time(0):
             time_start = time_now
 
+        seq += 1
+
         Z_MEst = image_handler.estimate_lane(Z_initial=Z_old)
+
         lane_coeff = LaneCoefficients()
-        lane_coeff.header = Header()
+        lane_coeff.header.frame_id = "din70000"
+        lane_coeff.header.seq = seq
+        lane_coeff.header.stamp = rospy.Time.now()
         lane_coeff.W = Z_MEst[0][0]
         lane_coeff.Y_offset = Z_MEst[1][0]
         lane_coeff.dPhi = Z_MEst[2][0]
