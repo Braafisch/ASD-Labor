@@ -109,11 +109,8 @@ if __name__ == "__main__":
     trajectory_handler = TrajectoryHandler()
 
     # main loop
-    time_start = rospy.Time(0)
     while not rospy.is_shutdown():
         time_now = rospy.get_rostime()
-        if time_start == rospy.Time(0):
-            time_start = time_now
 
         # TODO: fill message object with proper values
         control = Control()
@@ -127,4 +124,7 @@ if __name__ == "__main__":
 
         control_pub.publish(control)
 
-        rate.sleep()
+        try:
+            rate.sleep()
+        except rospy.exceptions.ROSInterruptException as e:
+            rospy.logdebug(f"Stopping {rospy.get_name()}, because of interrupt: {e}")

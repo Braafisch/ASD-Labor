@@ -163,7 +163,12 @@ class TrafficLightState(smach.State):
             )
             self.tlvis_publisher.publish(tl_visualization)
 
-            r.sleep()
+            try:
+                r.sleep()
+            except rospy.exceptions.ROSInterruptException as e:
+                rospy.logdebug(
+                    f"Stopping {rospy.get_name()}, because of interrupt: {e}"
+                )
 
         rospy.logout("Leaving state %s." % (self.color))
 
