@@ -136,25 +136,32 @@ class ImageHandler:
         self.pub_dbg_pts_lane_left.publish(setMarker(lane_left, g=1))
         self.pub_dbg_pts_lane_right.publish(setMarker(lane_right, b=1))
 
+        self.Z_MEst = Z_initial
         # refine initial estimate via M-Estimator
         if lane_left.size > 2 and lane_right.size > 2:
-            self.Z_MEst = self.MEstimator_lane_fit(
-                lane_left, lane_right, Z_initial, sigma=0.2, maxIteration=10
+            same_x_coordinates = np.all(lane_left[:, 0] == lane_left[0, 0]) and np.all(
+                lane_right[:, 0] == lane_right[0, 0]
             )
-            rospy.loginfo(
-                "lane coefficients: "
-                f"W={self.Z_MEst[0][0]}, "
-                f"Y_offset={self.Z_MEst[1][0]}m, "
-                f"dPhi={self.Z_MEst[2][0] * 180.0 / np.pi}deg, "
-                f"c0={self.Z_MEst[3][0]}"
-            )
-            x_pred, yl_pred, yr_pred = self.LS_lane_compute(
-                self.Z_MEst, self.max_range_m + 20, step=0.25
-            )
-            self.pub_dbg_pts_lane_left_pred.publish(setMarkerPred(x_pred, yl_pred, g=1))
-            self.pub_dbg_pts_lane_right_pred.publish(
-                setMarkerPred(x_pred, yr_pred, b=1)
-            )
+            if not same_x_coordinates:
+                self.Z_MEst = self.MEstimator_lane_fit(
+                    lane_left, lane_right, Z_initial, sigma=0.2, maxIteration=10
+                )
+                rospy.loginfo(
+                    "lane coefficients: "
+                    f"W={self.Z_MEst[0][0]}, "
+                    f"Y_offset={self.Z_MEst[1][0]}m, "
+                    f"dPhi={self.Z_MEst[2][0] * 180.0 / np.pi}deg, "
+                    f"c0={self.Z_MEst[3][0]}"
+                )
+                x_pred, yl_pred, yr_pred = self.LS_lane_compute(
+                    self.Z_MEst, self.max_range_m + 20, step=0.25
+                )
+                self.pub_dbg_pts_lane_left_pred.publish(
+                    setMarkerPred(x_pred, yl_pred, g=1)
+                )
+                self.pub_dbg_pts_lane_right_pred.publish(
+                    setMarkerPred(x_pred, yr_pred, b=1)
+                )
         return self.Z_MEst
 
     def Cauchy(self, r, sigma=1):
@@ -208,7 +215,11 @@ class ImageHandler:
             Z0 = Z
             r = np.dot(H, Z) - Y
             K = np.diag(self.Cauchy(r, sigma)[:, 0])
-            H_inv = np.linalg.inv(np.linalg.multi_dot([H.T, K, H]))
+            H_TK = np.linalg.multi_dot([H.T, K, H])
+            # Check if H.T*K*H is a singular matrix,
+            if np.linalg.det(H_TK) == 0:
+                break
+            H_inv = np.linalg.inv(H_TK)
             Z = np.linalg.multi_dot([H_inv, H.T, K, Y])
             if np.all(
                 [
@@ -319,7 +330,7 @@ if __name__ == "__main__":
 
     # setup image handler
     image_handler = ImageHandler()
-    Z_old = np.array([5, -0.5, 0.3, 0]).T
+    Z_old = np.array([[5], [-0.5], [0.3], [0]])
 
     seq = 0
 
