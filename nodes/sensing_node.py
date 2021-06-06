@@ -47,6 +47,7 @@ class ImageHandler:
         # callback function is called multiple times in parallel.
 
         # publishers
+        self.pub_dbg_canny = rospy.Publisher("canny_dbg", Image, queue_size=1)
         self.pub_dbg_image = rospy.Publisher(
             "lane_detection_dbg_image", Image, queue_size=1
         )
@@ -79,6 +80,7 @@ class ImageHandler:
 
         # Detect edges through canny edge detector
         canny_image = cv2.Canny(cv_image, 110, 200)
+        self.pub_dbg_canny.publish(self.bridge.cv2_to_imgmsg(canny_image))
 
         # generate color image and draw box on road
         roi_left_line_im = self.image_helper.road2image(self.roi_left_line)
