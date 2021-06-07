@@ -146,7 +146,7 @@ class TrajectoryHandler:
 def create_debug_marker(id: int, x: float, y: float, size: float = 5) -> Marker:
     marker = Marker()
     marker.header = std_msgs.msg.Header()
-    marker.header.frame_id = "base_link"
+    marker.header.frame_id = "map"
     marker.id = id
     marker.action = Marker.ADD
     marker.type = Marker.CUBE
