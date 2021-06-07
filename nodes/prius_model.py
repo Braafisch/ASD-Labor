@@ -1,6 +1,5 @@
 import numpy as np
 import rospy
-from rospy import rostime
 import tf
 from sensor_msgs.msg import JointState
 import message_filters

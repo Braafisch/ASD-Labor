@@ -10,8 +10,8 @@ import std_msgs.msg
 import tf
 import numpy as np
 
-from geometry_msgs.msg import Point, Vector3, Quaternion
-from std_msgs.msg import ColorRGBA, Header
+from geometry_msgs.msg import Point, Vector3
+from std_msgs.msg import ColorRGBA
 from visualization_msgs.msg import Marker
 
 from car_demo.msg import Control, Trajectory
@@ -175,8 +175,6 @@ if __name__ == "__main__":
     # main loop
     while not rospy.is_shutdown():
         time_now = rospy.get_rostime()
-        if time_start == rospy.Time(0):
-            time_start = time_now
         try:
             prius.update(time_now)
         except (
