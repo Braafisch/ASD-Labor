@@ -188,7 +188,9 @@ if __name__ == "__main__":
             try:
                 rate.sleep()
             except rospy.exceptions.ROSInterruptException as e:
-                rospy.logdebug(f"Stopping {rospy.get_name()}, because of interrupt: {e}")
+                rospy.logdebug(
+                    f"Stopping {rospy.get_name()}, because of interrupt: {e}"
+                )
             continue
         trajectory_handler.calculate_control()
         control = Control()

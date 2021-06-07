@@ -71,7 +71,7 @@ class Prius_State:
             rospy.loginfo("Could not receive position information!")
             return self.x, self.y, self.yaw
 
-    def update(self,time_now):
+    def update(self, time_now):
         self.t = time_now
         self.x, self.y, self.yaw = self.get_postion()
         self.v = self.get_velocity()
