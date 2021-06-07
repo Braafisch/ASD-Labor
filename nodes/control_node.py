@@ -99,7 +99,7 @@ class TrajectoryHandler:
         return delta, current_target_idx, error_front_axle
 
     def calculate_control(self):
-        if self.trajec is not None:
+        if self.trajec is not None or self.trajec:
             di, self.last_target_idx, _ = self.stanley_control(
                 state=self.prius,
                 cx=self.trajec.x,
@@ -114,14 +114,23 @@ class TrajectoryHandler:
             )
             self.control_dbg_pub.publish(marker)
             ai = self.trajec.v[self.last_target_idx] - self.prius.v
+
             di = np.clip(di, -max_steer, max_steer)
             self.steer = di / np.radians(30.0)
+            self.gear = Control.FORWARD
             if ai >= 0:
-                self.throttle = 0.01
+                self.throttle = np.clip(ai, None, 2.8) / 2.8
                 self.brake = 0
             else:
-                self.brake = 0.5
+                self.brake = np.clip(ai, None, 1.5) / 1.5
                 self.throttle = 0
+
+        elif not self.trajec:
+            self.trajec = None
+            self.gear = Control.NO_COMMAND
+            self.throttle = 0
+            self.brake = 0
+            self.steer = 0
 
     def get_control(self):
         return self.throttle, self.brake, self.steer, self.gear
@@ -140,7 +149,6 @@ class TrajectoryHandler:
 
         self.trajec = message
         self.last_target_idx = 0
-        self.gear = Control.FORWARD
 
 
 def create_debug_marker(id: int, x: float, y: float, size: float = 5) -> Marker:
