@@ -28,7 +28,7 @@ class ImageHandler:
         self.bridge = CvBridge()
         self.image_helper = SimulationImageHelper()
         self.Z_MEst = np.zeros((4, 1))
-        self.latest_canny_image = np.zeros((800, 800))
+        self.latest_front_camera_image: Image = None
         #  Select the region which might be interesting for detecting left
         #  and right lane
         self.max_range_m = 40
@@ -47,6 +47,7 @@ class ImageHandler:
         # callback function is called multiple times in parallel.
 
         # publishers
+        self.pub_dbg_canny = rospy.Publisher("canny_dbg", Image, queue_size=1)
         self.pub_dbg_image = rospy.Publisher(
             "lane_detection_dbg_image", Image, queue_size=1
         )
@@ -63,58 +64,72 @@ class ImageHandler:
             "pts_lane_right_pred_dbg", Marker, queue_size=1
         )
 
-    def _callback(self, message):
-        # print("Enter callback function of Image Handler")
+    def _callback(self, message: Image):
+        self.latest_front_camera_image = message
+
+    def estimate_lane(self, Z_initial):
         try:
-            cv_image = self.bridge.imgmsg_to_cv2(message, "mono8")
+            cv_image = self.bridge.imgmsg_to_cv2(
+                self.latest_front_camera_image, "mono8"
+            )
         except CvBridgeError as e:
             rospy.logerr("Error in imageCallback: %s", e)
 
-        # Detect lines
-        cv_image_color = cv2.cvtColor(cv_image, cv2.COLOR_GRAY2BGR)
-        #  Canny-Edge Detector
-        canny_image = cv2.Canny(cv_image_color, 110, 200)
-        self.latest_canny_image = canny_image
+        # Delete horizon/end-of-map
+        cv_image = cv2.inRange(cv_image, 240, 255)
+
+        # Detect edges through canny edge detector
+        canny_image = cv2.Canny(cv_image, 110, 200)
+        self.pub_dbg_canny.publish(self.bridge.cv2_to_imgmsg(canny_image))
 
         # generate color image and draw box on road
         roi_left_line_im = self.image_helper.road2image(self.roi_left_line)
         roi_right_line_im = self.image_helper.road2image(self.roi_right_line)
+
+        cv_image_color_dbg = cv2.cvtColor(cv_image, cv2.COLOR_GRAY2BGR)
         cv2.polylines(
-            cv_image_color,
-            [roi_left_line_im.astype(np.int32), roi_right_line_im.astype(np.int32)],
+            cv_image_color_dbg,
+            [roi_left_line_im.astype(np.int32)],
             isClosed=True,
-            color=(0, 0, 255),
+            color=(0, 255, 0),
+            thickness=8,
+        )
+        cv2.polylines(
+            cv_image_color_dbg,
+            [roi_right_line_im.astype(np.int32)],
+            isClosed=True,
+            color=(255, 0, 0),
             thickness=8,
         )
         # downscale to reduce load
-        cv_image_color = cv2.pyrDown(cv_image_color)
+        cv_image_color_dbg = cv2.pyrDown(cv_image_color_dbg)
         try:
-            self.pub_dbg_image.publish(
-                self.bridge.cv2_to_imgmsg(cv_image_color, "bgr8")
-            )
+            self.pub_dbg_image.publish(self.bridge.cv2_to_imgmsg(cv_image_color_dbg))
         except CvBridgeError as e:
             rospy.logerr(e)
 
-        # print("Exit callback function of Image Handler")
-
-    def estimate_lane(self, Z_initial):
-        #  Convert detected edges, that are in image coordinates, to road coordinates.
-        height_image = self.latest_canny_image.shape[0]
-        pts_im = np.array([])
-        crop_idx = np.array([height_image / 2, height_image * 0.74]).astype(int)
-        canny_cropped = np.array(
-            self.latest_canny_image[crop_idx[0] : crop_idx[1], :]  # noqa:E203
+        # Convert detected edges, that are in image coordinates, to road coordinates.
+        skip_x = 5
+        skip_y = 1
+        height_image = canny_image.shape[0]
+        crop_bounds_x = np.array([height_image * 0.5, height_image * 0.74]).astype(
+            np.int32
         )
-        for x in range(0, len(canny_cropped), 5):
-            x += crop_idx[0]
-            for y in range(0, len(canny_cropped[0]), 2):
-                if self.latest_canny_image[x, y] == 255:
-                    pts_im = np.append(pts_im, [y, x])
-        pts_im = pts_im.reshape((int(len(pts_im) / 2), 2))
+        canny_image_cropped_decimated = np.array(
+            canny_image[
+                crop_bounds_x[0] : crop_bounds_x[1] : skip_x, ::skip_y  # noqa:E203
+            ]
+        )
+
+        pts_im = np.argwhere(canny_image_cropped_decimated >= 255)
+        pts_im[:, 0] *= skip_x
+        pts_im[:, 0] += crop_bounds_x[0]
+        pts_im[:, 1] *= skip_y
+        pts_im = np.roll(pts_im, 1, axis=1)
+
         pts_road = self.image_helper.image2road(pts_im)
 
-        #  Select the region which might be interesting for detecting left
-        #  and right lane
+        # Select the region which might be interesting for detecting left and right lane
         lane_left = np.empty((0, 2))
         lane_right = np.empty((0, 2))
         for i in range(pts_road.shape[0]):
@@ -310,7 +325,6 @@ def setMarkerPred(x, y, g=0, b=0):
 
 if __name__ == "__main__":
     rospy.init_node("sensing_node")
-    # rate = rospy.Rate(10.0)
 
     # publishers
     lane_coeff_pub = rospy.Publisher(
@@ -324,25 +338,19 @@ if __name__ == "__main__":
     seq = 0
 
     # main loop
-    time_start = rospy.Time(0)
     while not rospy.is_shutdown():
-        time_now = rospy.get_rostime()
-        if time_start == rospy.Time(0):
-            time_start = time_now
-
         seq += 1
 
-        Z_MEst = image_handler.estimate_lane(Z_initial=Z_old)
+        if image_handler.latest_front_camera_image is not None:
+            Z_MEst = image_handler.estimate_lane(Z_initial=Z_old)
 
-        lane_coeff = LaneCoefficients()
-        lane_coeff.header.frame_id = "din70000"
-        lane_coeff.header.seq = seq
-        lane_coeff.header.stamp = rospy.Time.now()
-        lane_coeff.W = Z_MEst[0][0]
-        lane_coeff.Y_offset = Z_MEst[1][0]
-        lane_coeff.dPhi = Z_MEst[2][0]
-        lane_coeff.c0 = Z_MEst[3][0]
-        lane_coeff_pub.publish(lane_coeff)
-        Z_old = image_handler.Z_next_initial_limit()
-
-        # rate.sleep()
+            lane_coeff = LaneCoefficients()
+            lane_coeff.header.frame_id = "din70000"
+            lane_coeff.header.seq = seq
+            lane_coeff.header.stamp = rospy.Time.now()
+            lane_coeff.W = Z_MEst[0][0]
+            lane_coeff.Y_offset = Z_MEst[1][0]
+            lane_coeff.dPhi = Z_MEst[2][0]
+            lane_coeff.c0 = Z_MEst[3][0]
+            lane_coeff_pub.publish(lane_coeff)
+            Z_old = image_handler.Z_next_initial_limit()
