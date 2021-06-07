@@ -259,24 +259,24 @@ class ImageHandler:
 
         return (x_pred, yl_pred, yr_pred)
 
-    def Z_next_initial_limit(self):
+    def Z_next_initial_limit(self, Z_MEst):
 
         # Max of W (lane width) is 5m
         W_min = 0.0
-        W_max = 5.0
-        np.clip(self.Z_MEst[0][0], W_min, W_max)
+        W_max = 4.0
+        np.clip(Z_MEst[0][0], W_min, W_max)
 
         # Range of Y_offset is from -2m to 2m
-        Yo_min = -2.5
-        Yo_max = 2.5
-        np.clip(self.Z_MEst[1][0], Yo_min, Yo_max)
+        Yo_min = -2
+        Yo_max = 2
+        np.clip(Z_MEst[1][0], Yo_min, Yo_max)
 
         # Range of dPhi from -70 degrees to +70 degrees
         dPhi_min = -45 * np.pi / 180.0
         dPhi_max = 45 * np.pi / 180.0
-        np.clip(self.Z_MEst[2][0], dPhi_min, dPhi_max)
+        np.clip(Z_MEst[2][0], dPhi_min, dPhi_max)
 
-        return self.Z_MEst
+        return Z_MEst
 
 
 def setMarker(lane, g=0, b=0):
@@ -354,6 +354,6 @@ if __name__ == "__main__":
         lane_coeff.dPhi = Z_MEst[2][0]
         lane_coeff.c0 = Z_MEst[3][0]
         lane_coeff_pub.publish(lane_coeff)
-        Z_old = image_handler.Z_next_initial_limit()
+        Z_old = image_handler.Z_next_initial_limit(Z_MEst)
 
         # rate.sleep()
