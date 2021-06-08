@@ -5,6 +5,6 @@ source /opt/ros/$ROS_DISTRO/setup.bash
 
 sudo chown vscode:vscode /workspace /workspace/src
 
-mkdir -p /workspace/src && [ -f /workspace/src/CMakeLists.txt ] || cd /workspace/src && catkin_init_workspace
+mkdir -p /workspace/src && ([ -f /workspace/src/CMakeLists.txt ] || catkin_init_workspace /workspace/src)
 
 exec "$@"
