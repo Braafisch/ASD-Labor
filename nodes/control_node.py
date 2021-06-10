@@ -99,7 +99,13 @@ class TrajectoryHandler:
         return delta, current_target_idx, error_front_axle
 
     def calculate_control(self):
-        if self.trajec is not None or self.trajec:
+        if (
+            self.trajec is not None
+            and self.trajec.x
+            and self.trajec.y
+            and self.trajec.theta
+            and self.trajec.v
+        ):
             di, self.last_target_idx, _ = self.stanley_control(
                 state=self.prius,
                 cx=self.trajec.x,
@@ -125,7 +131,7 @@ class TrajectoryHandler:
                 self.brake = np.clip(ai, None, 1.5) / 1.5
                 self.throttle = 0
 
-        elif not self.trajec:
+        elif self.trajec is not None:
             self.trajec = None
             self.gear = Control.NO_COMMAND
             self.throttle = 0
