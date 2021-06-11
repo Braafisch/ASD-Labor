@@ -69,9 +69,9 @@ class ImageHandler:
         self.pub_dbg_pts_lane_right_pred = rospy.Publisher(
             "pts_lane_right_pred_dbg", Marker, queue_size=1
         )
-        # self.pub_dbg_pts_lane_middle_pred = rospy.Publisher(
-        #     "pts_lane_middle_pred_dbg", Marker, queue_size=1
-        # )
+        self.pub_dbg_pts_lane_middle_pred = rospy.Publisher(
+            "pts_lane_middle_pred_dbg", Marker, queue_size=1
+        )
 
     def _callback(self, message: Image):
         self.latest_front_camera_image = message
@@ -186,7 +186,12 @@ class ImageHandler:
             )
             if not same_x_coordinates:
                 self.Z_MEst = self.MEstimator_lane_fit(
-                    lane_left, lane_right, Z_initial, sigma=0.2, maxIteration=10
+                    lane_left,
+                    lane_right,
+                    lane_middle,
+                    Z_initial,
+                    sigma=0.2,
+                    maxIteration=10,
                 )
                 rospy.loginfo(
                     "lane coefficients: "
@@ -195,7 +200,7 @@ class ImageHandler:
                     f"dPhi={self.Z_MEst[2][0] * 180.0 / np.pi}deg, "
                     f"c0={self.Z_MEst[3][0]}"
                 )
-                x_pred, yl_pred, yr_pred = self.LS_lane_compute(
+                x_pred, yl_pred, yr_pred, ym_pred = self.LS_lane_compute(
                     self.Z_MEst, self.max_range_m + 20, step=0.25
                 )
                 self.pub_dbg_pts_lane_left_pred.publish(
@@ -203,6 +208,9 @@ class ImageHandler:
                 )
                 self.pub_dbg_pts_lane_right_pred.publish(
                     setMarkerPred(x_pred, yr_pred, b=1)
+                )
+                self.pub_dbg_pts_lane_middle_pred.publish(
+                    setMarkerPred(x_pred, ym_pred, r=1, g=1)
                 )
         return self.Z_MEst
 
@@ -221,7 +229,7 @@ class ImageHandler:
         w = 1 / (1 + (r / c) ** 2)
         return w
 
-    def MEstimator_lane_fit(self, pL, pR, Z_initial, sigma=1, maxIteration=10):
+    def MEstimator_lane_fit(self, pL, pR, pM, Z_initial, sigma=1, maxIteration=10):
         """
         M-Estimator for lane coefficients z=(W, Y_offset, Delta_Phi, c0)^T.
 
@@ -235,8 +243,8 @@ class ImageHandler:
         Returns:
             Z: lane coefficients (W, Y_offset, Delta_Phi, c0)
         """
-        H = np.zeros((pL.shape[0] + pR.shape[0], 4))  # design matrix
-        Y = np.zeros((pL.shape[0] + pR.shape[0], 1))  # noisy observations
+        H = np.zeros((pL.shape[0] + pR.shape[0] + pM.shape[0], 4))  # design matrix
+        Y = np.zeros((pL.shape[0] + pR.shape[0] + pM.shape[0], 1))  # noisy observations
 
         # fill H and Y for left line points
         for i in range(pL.shape[0]):
@@ -251,6 +259,13 @@ class ImageHandler:
             u2 = u * u
             H[pL.shape[0] + i, :] = [-0.5, -1, -u, 1.0 / 2.0 * u2]
             Y[pL.shape[0] + i] = v
+
+        # fill H and Y for middle line points
+        for i in range(pM.shape[0]):
+            u, v = pM[i, 0], pM[i, 1]
+            u2 = u * u
+            H[pL.shape[0] + pR.shape[0] + i, :] = [0, -1, -u, 1.0 / 2.0 * u2]
+            Y[pL.shape[0] + pR.shape[0] + i] = v
 
         Z = Z_initial
         for _ in range(0, maxIteration):
@@ -292,14 +307,16 @@ class ImageHandler:
         x_pred = np.arange(0, maxDist, step)
         yl_pred = np.zeros_like(x_pred)
         yr_pred = np.zeros_like(x_pred)
+        ym_pred = np.zeros_like(x_pred)
 
         for i in range(x_pred.shape[0]):
             u = x_pred[i]
             u2 = u * u
             yl_pred[i] = np.dot(np.array([0.5, -1, -u, 1.0 / 2.0 * u2]), Z)
             yr_pred[i] = np.dot(np.array([-0.5, -1, -u, 1.0 / 2.0 * u2]), Z)
+            ym_pred[i] = np.dot(np.array([0, -1, -u, 1.0 / 2.0 * u2]), Z)
 
-        return (x_pred, yl_pred, yr_pred)
+        return (x_pred, yl_pred, yr_pred, ym_pred)
 
     def Z_next_initial_limit(self, Z_MEst):
 
@@ -373,7 +390,7 @@ if __name__ == "__main__":
 
     # setup image handler
     image_handler = ImageHandler()
-    Z_old = np.array([[5], [-0.5], [0.3], [0]])
+    Z_old = np.array([[5], [-2], [0.3], [0]])
 
     seq = 0
 
