@@ -38,6 +38,9 @@ class ImageHandler:
         self.roi_left_line = np.array(
             [[3, 0], [15, 0], [self.max_range_m, -3], [self.max_range_m, 5], [3, 5]]
         )
+        self.roi_middle_line = np.array(
+            [[3, 2], [self.max_range_m, 2], [self.max_range_m, -2], [3, -2]]
+        )
         # subscribers
         self.image_sub = rospy.Subscriber(
             "/prius/front_camera/image_raw", Image, self._callback, queue_size=1
@@ -57,12 +60,18 @@ class ImageHandler:
         self.pub_dbg_pts_lane_right = rospy.Publisher(
             "pts_lane_right_dbg", Marker, queue_size=1
         )
+        self.pub_dbg_pts_lane_middle = rospy.Publisher(
+            "pts_lane_middle_dbg", Marker, queue_size=1
+        )
         self.pub_dbg_pts_lane_left_pred = rospy.Publisher(
             "pts_lane_left_pred_dbg", Marker, queue_size=1
         )
         self.pub_dbg_pts_lane_right_pred = rospy.Publisher(
             "pts_lane_right_pred_dbg", Marker, queue_size=1
         )
+        # self.pub_dbg_pts_lane_middle_pred = rospy.Publisher(
+        #     "pts_lane_middle_pred_dbg", Marker, queue_size=1
+        # )
 
     def _callback(self, message: Image):
         self.latest_front_camera_image = message
@@ -85,6 +94,7 @@ class ImageHandler:
         # generate color image and draw box on road
         roi_left_line_im = self.image_helper.road2image(self.roi_left_line)
         roi_right_line_im = self.image_helper.road2image(self.roi_right_line)
+        roi_middle_line_im = self.image_helper.road2image(self.roi_middle_line)
 
         cv_image_color_dbg = cv2.cvtColor(cv_image, cv2.COLOR_GRAY2BGR)
         cv2.polylines(
@@ -99,6 +109,13 @@ class ImageHandler:
             [roi_right_line_im.astype(np.int32)],
             isClosed=True,
             color=(255, 0, 0),
+            thickness=8,
+        )
+        cv2.polylines(
+            cv_image_color_dbg,
+            [roi_middle_line_im.astype(np.int32)],
+            isClosed=True,
+            color=(0, 0, 255),
             thickness=8,
         )
         # downscale to reduce load
@@ -132,6 +149,7 @@ class ImageHandler:
         # Select the region which might be interesting for detecting left and right lane
         lane_left = np.empty((0, 2))
         lane_right = np.empty((0, 2))
+        lane_middle = np.empty((0, 2))
         for i in range(pts_road.shape[0]):
             if (
                 cv2.pointPolygonTest(
@@ -147,12 +165,21 @@ class ImageHandler:
                 > 0
             ):
                 lane_right = np.vstack((lane_right, pts_road[i, :]))
+            if (
+                cv2.pointPolygonTest(
+                    self.roi_middle_line, (pts_road[i, 0], pts_road[i, 1]), False
+                )
+                > 0
+            ):
+                lane_middle = np.vstack((lane_middle, pts_road[i, :]))
 
         self.pub_dbg_pts_lane_left.publish(setMarker(lane_left, g=1))
         self.pub_dbg_pts_lane_right.publish(setMarker(lane_right, b=1))
+        self.pub_dbg_pts_lane_middle.publish(setMarker(lane_middle, r=1, g=1))
 
         self.Z_MEst = Z_initial
         # refine initial estimate via M-Estimator
+        # ????? lane_middle darf 0 Punkte besitzen ??????
         if lane_left.size > 2 and lane_right.size > 2:
             same_x_coordinates = np.all(lane_left[:, 0] == lane_left[0, 0]) and np.all(
                 lane_right[:, 0] == lane_right[0, 0]
@@ -294,7 +321,7 @@ class ImageHandler:
         return Z_MEst
 
 
-def setMarker(lane, g=0, b=0):
+def setMarker(lane, r=0, g=0, b=0):
     ptsMarker = Marker()
     ptsMarker.header = Header()
     ptsMarker.header.frame_id = "din70000"
@@ -302,6 +329,7 @@ def setMarker(lane, g=0, b=0):
     ptsMarker.type = Marker.POINTS
     ptsMarker.scale.x = 0.1
     ptsMarker.scale.y = 0.1
+    ptsMarker.color.r = r
     ptsMarker.color.g = g
     ptsMarker.color.b = b
     ptsMarker.color.a = 1
@@ -314,7 +342,7 @@ def setMarker(lane, g=0, b=0):
     return ptsMarker
 
 
-def setMarkerPred(x, y, g=0, b=0):
+def setMarkerPred(x, y, r=0, g=0, b=0):
     ptsMarker = Marker()
     ptsMarker.header = Header()
     ptsMarker.header.frame_id = "din70000"
@@ -322,6 +350,7 @@ def setMarkerPred(x, y, g=0, b=0):
     ptsMarker.type = Marker.POINTS
     ptsMarker.scale.x = 0.1
     ptsMarker.scale.y = 0.1
+    ptsMarker.color.r = r
     ptsMarker.color.g = g
     ptsMarker.color.b = b
     ptsMarker.color.a = 1

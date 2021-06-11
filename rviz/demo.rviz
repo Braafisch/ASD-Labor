@@ -226,6 +226,14 @@ Visualization Manager:
           Value: true
         - Class: rviz/Marker
           Enabled: true
+          Marker Topic: /pts_lane_middle_dbg
+          Name: Middle Lane Points
+          Namespaces:
+              "": true
+          Queue Size: 100
+          Value: true
+        - Class: rviz/Marker
+          Enabled: true
           Marker Topic: /control_dbg
           Name: Steering Target
           Namespaces: {}
