@@ -74,10 +74,30 @@ class TrafficLightHandler:
 
 def create_trajectory(
     lane_coeff: LaneCoefficients,
+    tl_status: TrafficLightStatus,
     tf_listener: tf.TransformListener,
     max_dist: float = 50,
     step: float = 0.5,
 ) -> Trajectory:
+    tl_dist_threshold = 4
+
+    if (
+        tl_status is not None
+        and tl_status.dist_m >= 0
+        and tl_status.dist_m < tl_dist_threshold
+        and tl_status.state != TrafficLightStatus.INVALID
+        and tl_status.state != TrafficLightStatus.GREEN
+    ):
+        trajectory = Trajectory()
+        trajectory.header = lane_coeff.header
+        trajectory.x = tuple()
+        trajectory.y = tuple()
+        trajectory.theta = tuple()
+        trajectory.c = tuple()
+        trajectory.v = tuple()
+        trajectory.s = tuple()
+        return trajectory
+
     x = np.arange(0, max_dist, step)
     y = np.empty_like(x)
     Z = np.array([lane_coeff.W, lane_coeff.Y_offset, lane_coeff.dPhi, lane_coeff.c0])
@@ -113,6 +133,7 @@ def create_debug_marker(
 ) -> Marker:
     marker = Marker()
     marker.header = header
+    marker.header.frame_id = "map"
     marker.id = id
     marker.action = Marker.ADD
     marker.type = Marker.ARROW
@@ -126,7 +147,7 @@ def create_debug_marker(
 
 if __name__ == "__main__":
     rospy.init_node("planning_node")
-    rate = rospy.Rate(1.0)
+    rate = rospy.Rate(5.0)
 
     # subscribers
     tf_listener = tf.TransformListener()
@@ -151,6 +172,7 @@ if __name__ == "__main__":
         # LaneCoefficients until a traffic light is found.
 
         lane_coeff = lane_coeff_handler.latest_lane_coeff
+        traffic_light_status = traffic_light_handler.latest_traffic_light_status
 
         if lane_coeff is not None:
             if not first_lane_coeff_recvd:
@@ -159,7 +181,11 @@ if __name__ == "__main__":
 
             try:
                 trajectory = create_trajectory(
-                    lane_coeff, tf_listener, max_dist=MAX_DIST, step=STEP_SIZE
+                    lane_coeff,
+                    traffic_light_status,
+                    tf_listener,
+                    max_dist=MAX_DIST,
+                    step=STEP_SIZE,
                 )
             except (
                 tf.LookupException,
