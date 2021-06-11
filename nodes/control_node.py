@@ -135,7 +135,7 @@ class TrajectoryHandler:
             self.trajec = None
             self.gear = Control.NO_COMMAND
             self.throttle = 0
-            self.brake = 0
+            self.brake = 1.0
             self.steer = 0
 
     def get_control(self):
