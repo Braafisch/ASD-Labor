@@ -31,7 +31,7 @@ class ImageHandler:
         self.latest_front_camera_image: Image = None
         #  Select the region which might be interesting for detecting left
         #  and right lane
-        self.max_range_m = 30
+        self.max_range_m = 15
         self.roi_right_line = np.array(
             [[3, 0], [10, 0], [self.max_range_m, 5], [self.max_range_m, -5], [3, -6]]
         )
@@ -126,6 +126,10 @@ class ImageHandler:
         pts_im[:, 0] += crop_bounds_x[0]
         pts_im[:, 1] *= skip_y
         pts_im = np.roll(pts_im, 1, axis=1)
+        distance = np.diff(pts_im[:, 0])
+        indi = np.argwhere(((0.5 > distance) | (distance > 7.75))) + 1
+        indi = np.reshape(indi, (indi.shape[0],))
+        pts_im = pts_im[indi, :]
 
         pts_road = self.image_helper.image2road(pts_im)
 
