@@ -31,12 +31,12 @@ class ImageHandler:
         self.latest_front_camera_image: Image = None
         #  Select the region which might be interesting for detecting left
         #  and right lane
-        self.max_range_m = 40
+        self.max_range_m = 30
         self.roi_right_line = np.array(
-            [[3, 0], [15, 0], [self.max_range_m, 3], [self.max_range_m, -5], [3, -5]]
+            [[3, 0], [10, 0], [self.max_range_m, 5], [self.max_range_m, -5], [3, -6]]
         )
         self.roi_left_line = np.array(
-            [[3, 0], [15, 0], [self.max_range_m, -3], [self.max_range_m, 5], [3, 5]]
+            [[3, 0], [10, 0], [self.max_range_m, -5], [self.max_range_m, 5], [3, 6]]
         )
         # subscribers
         self.image_sub = rospy.Subscriber(
@@ -247,6 +247,7 @@ class ImageHandler:
                 ]
             ):
                 break
+        Z = self.lane_coefficients_limit(Z)
         return Z
 
     def LS_lane_compute(self, Z, maxDist=60, step=0.5):
@@ -274,22 +275,22 @@ class ImageHandler:
 
         return (x_pred, yl_pred, yr_pred)
 
-    def Z_next_initial_limit(self, Z_MEst):
+    def lane_coefficients_limit(self, Z_MEst):
 
         # Max of W (lane width) is 5m
-        W_min = 0.0
-        W_max = 4.0
-        np.clip(Z_MEst[0][0], W_min, W_max)
+        W_min = 3.5
+        W_max = 8
+        Z_MEst[0][0] = np.clip(Z_MEst[0][0], W_min, W_max)
 
         # Range of Y_offset is from -2m to 2m
         Yo_min = -2
         Yo_max = 2
-        np.clip(Z_MEst[1][0], Yo_min, Yo_max)
+        Z_MEst[1][0] = np.clip(Z_MEst[1][0], Yo_min, Yo_max)
 
         # Range of dPhi from -70 degrees to +70 degrees
-        dPhi_min = -45 * np.pi / 180.0
-        dPhi_max = 45 * np.pi / 180.0
-        np.clip(Z_MEst[2][0], dPhi_min, dPhi_max)
+        dPhi_min = -60 * np.pi / 180.0
+        dPhi_max = 60 * np.pi / 180.0
+        Z_MEst[2][0] = np.clip(Z_MEst[2][0], dPhi_min, dPhi_max)
 
         return Z_MEst
 
@@ -364,4 +365,4 @@ if __name__ == "__main__":
             lane_coeff.dPhi = Z_MEst[2][0]
             lane_coeff.c0 = Z_MEst[3][0]
             lane_coeff_pub.publish(lane_coeff)
-            Z_old = image_handler.Z_next_initial_limit(Z_MEst)
+            Z_old = image_handler.lane_coefficients_limit(Z_MEst)
