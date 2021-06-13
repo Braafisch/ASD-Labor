@@ -247,7 +247,6 @@ class ImageHandler:
                 ]
             ):
                 break
-        Z = self.lane_coefficients_limit(Z)
         return Z
 
     def LS_lane_compute(self, Z, maxDist=60, step=0.5):
