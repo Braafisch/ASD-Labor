@@ -163,7 +163,7 @@ class ImageHandler:
             )
             if not same_x_coordinates:
                 self.Z_MEst = self.MEstimator_lane_fit(
-                    lane_left, lane_right, Z_initial, sigma=0.2, maxIteration=10
+                    lane_left, lane_right, Z_initial, sigma=0.01, maxIteration=10
                 )
                 rospy.loginfo(
                     "lane coefficients: "
