@@ -230,7 +230,7 @@ class ImageHandler:
             Y[pL.shape[0] + i] = v
 
         Z = Z_initial
-        for _ in range(0, maxIteration):
+        for i in range(0, maxIteration):
             Z0 = Z
             r = np.dot(H, Z) - Y
             K = np.diag(self.Cauchy(r, sigma)[:, 0])
@@ -250,7 +250,12 @@ class ImageHandler:
                     np.isclose(Z[3][0], Z0[3], atol=1e-2),  # Parabola coefficient[1]
                 ]
             ):
+                rospy.logdebug(
+                    f"Found M-estimation early, after {i}/{maxIteration} iterations."
+                )
                 break
+        else:
+            rospy.logwarn(f"M-estimator hit iteration limit of {maxIteration}.")
         return Z
 
     def LS_lane_compute(self, Z, maxDist=60, step=0.5):
