@@ -345,7 +345,7 @@ def create_pred_markers(x, y, g=0, b=0):
 
 if __name__ == "__main__":
     rospy.init_node("sensing_node")
-    rate = rospy.Rate(5.0)
+    rate = rospy.Rate(20.0)
 
     # publishers
     lane_coeff_pub = rospy.Publisher(

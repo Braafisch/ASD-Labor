@@ -147,7 +147,7 @@ def create_debug_marker(
 
 if __name__ == "__main__":
     rospy.init_node("planning_node")
-    rate = rospy.Rate(5.0)
+    rate = rospy.Rate(20.0)
 
     # subscribers
     tf_listener = tf.TransformListener()
