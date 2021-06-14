@@ -340,6 +340,7 @@ def setMarkerPred(x, y, g=0, b=0):
 
 if __name__ == "__main__":
     rospy.init_node("sensing_node")
+    rate = rospy.Rate(5.0)
 
     # publishers
     lane_coeff_pub = rospy.Publisher(
@@ -369,3 +370,8 @@ if __name__ == "__main__":
             lane_coeff.c0 = Z_MEst[3][0]
             lane_coeff_pub.publish(lane_coeff)
             Z_old = image_handler.lane_coefficients_limit(Z_MEst)
+
+        try:
+            rate.sleep()
+        except rospy.exceptions.ROSInterruptException as e:
+            rospy.logdebug(f"Stopping {rospy.get_name()}, because of interrupt: {e}")
