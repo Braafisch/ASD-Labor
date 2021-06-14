@@ -6,136 +6,19 @@ A lab exercise designed to explore autonomous systems design via vehicle simulat
 
 ## Getting Started
 
-### Using Rocker
-
-To start, you'll have to install a ROS/Gazebo environment on your local system. There are various ways to do this. Our recommended way of creating a neatly packaged installation is through [Docker](https://www.docker.com/) and the [osrf/rocker](https://github.com/osrf/rocker) helper tool. Assuming you have a **Linux environment** (either in a VM or native), follow these steps:
-
-1. Install [Docker Engine](https://docs.docker.com/engine/install/), by following the steps listed for your distro.
-
-2. _(Optional: owners of NVIDA graphics cards)_ Install [`nvidia-container-toolkit`](https://github.com/NVIDIA/nvidia-docker) by following [these](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html#installation-guide) steps.
-
-3. Install [Rocker](https://github.com/osrf/rocker) by following [these](https://github.com/osrf/rocker#installation) steps.
-
-4. We now have the tools needed to create Docker images and run ROS/Gazebo inside a container. It's time to prepare the image:
-
-    1. Start with a pre-defined ROS image. If you installed `nvidia-container-toolkit`, you can use option `--nvidia` to include hardware acceleration capabilities.
-
-        ```sh
-        # If you do not use an NVIDA graphics card omit option '--nvidia'
-        rocker \
-            --pull \
-            --nvidia \
-            --name 'ros-asd-lab-prototype' \
-            osrf/ros:noetic-desktop-full
-        ```
-
-        Without NVIDIA support:
-
-        ```sh
-        # For non-NVIDIA users
-        rocker \
-            --pull \
-            --name 'ros-asd-lab-prototype' \
-            osrf/ros:noetic-desktop-full
-        ```
-
-        This will download the `noetic-desktop-full` ROS image, which contains a complete base install of ROS Noetic Ninjemys, from which we can expand. After pulling, extracting and building the image, Docker will present you with a command prompt running _inside_ the new container. Continue from there with the next step.
-
-    2. Inside the container install a few more libraries and tools:
-
-        ```sh
-        sudo apt update && sudo apt install -y \
-            libignition-msgs-dev \
-            python3-tk \
-            ros-noetic-fake-localization \
-            ros-noetic-joy \
-            ros-noetic-map-server \
-            ros-noetic-smach \
-            ros-noetic-smach-msgs \
-            ros-noetic-smach-ros \
-            ros-noetic-smach-viewer
-
-        # These are optional
-        sudo apt install -y \
-            git \
-            vim \
-            zsh
-
-        # This will clean up the package cache and command history
-        sudo apt clean
-        history -c
-        ```
-
-        During installation, you may be prompted to provide some information about your keyboard layout. After installation completed **do not exit out of the container**.
-
-    3. Open a second terminal (on your host Linux, not inside the container) and commit the container we commissioned just now.
-
-        ```sh
-        # This will solidify the changes made to container 'ros-asd-lab-prototype' in
-        # form of a new image named 'osrf/ros:noetic-desktop-full-asd'
-        docker commit 'ros-asd-lab-prototype' osrf/ros:noetic-desktop-full-asd
-        ```
-
-        This will _bake_ the tools we've installed into a neatly packaged image called `osrf/ros:noetic-desktop-full-asd`. Use this image to execute this project.
-
-    4. You can now stop this container. In the future, simply use image `osrf/ros:noetic-desktop-full-asd`.
-
-        ```sh
-        # in container
-        exit
-        ```
-
-5. We can now use the new image to start a fully commissioned container.
-
-    ```sh
-    # If you do not use an NVIDA graphics card omit option '--nvidia'
-    rocker \
-        --nvidia \
-        --x11 \
-        --git \
-        --home \
-        --user \
-        --name 'ros-asd-lab' \
-        osrf/ros:noetic-desktop-full-asd
-    ```
-
-    We use options `--x11` to forward the graphical applications inside the container to the Linux host. With `--git` we mount our git config inside the container. Same with `--home`, which will map the home directory of the current host user inside the container. Option `--user` will create a new non-root user, which will run our simulation.
-
-6. Inside the container create a catkin workspace and clone this repo into it:
-
-    ```sh
-    mkdir -p ~/catkin_ws/src
-    git clone https://github.com/Braafisch/ASD-Labor.git ~/catkin_ws/src/asd-lab
-    ```
-
-7. Build the catkin workspace:
-
-    ```sh
-    cd ~/catkin_ws
-    catkin_make
-    # where $SHELL should be either bash, zsh or sh
-    source "devel/setup.$(basename $SHELL)"
-    ```
-
-8. Launch the demo:
-
-    ```sh
-    cd ~/catkin_ws
-    roslaunch car_demo demo_keyboard.launch
-    ```
-
-9. You can attach additional terminals to the container using:
-
-    ```sh
-    # From host Linux
-    docker exec -it 'ros-asd-lab' bash # or zsh
-    ```
+To start, you'll have to install a ROS/Gazebo environment on your local system. There are various ways to do this. Our recommended way of creating a neatly packaged installation is through [Docker](https://www.docker.com/), [Visual Studio Code](https://code.visualstudio.com/) and the provided [devcontainer](https://code.visualstudio.com/docs/remote/create-dev-container).
 
 ### Using Devcontainer
 
-While less performant due to lack of hardware acceleration, the devcontainer may provide a better development experience. It only requires you to install [Docker Engine](https://docs.docker.com/engine/) and offers full language server support for vscode. To get up and running with the devcontainer follow these steps:
+While less performant due to lack of hardware acceleration, the devcontainer may provide a better development experience than a native install. It requires you to install [Docker Engine](https://docs.docker.com/engine/) and offers full language server support for vscode. To get up and running with the devcontainer follow these steps:
 
-1. Install [Docker Engine](https://docs.docker.com/engine/install/), by following the steps listed for your distro.
+1. Install [Docker Engine](https://docs.docker.com/engine/install/), by following the steps listed for your OS/distro.
+
+    - On Linux installation of Docker is fairly straightforward (see instructions linked above).
+    - On Windows, since Docker Engine requires [WSL2](https://docs.microsoft.com/en-us/windows/wsl/install-win10), which in turn requires Hyper-V, you might run into conflicts with other virtualization software such as VMware or VirtualBox (see [details](https://docs.microsoft.com/en-us/windows/wsl/wsl2-faq#will-i-be-able-to-run-wsl-2-and-other-3rd-party-virtualization-tools-such-as-vmware--or-virtualbox-)). We recommend using the latest versions of VMware/VirtualBox (those that support Hyper-V). **If -- _and only if_ -- that's impossible you have the following three other options**:
+        1. Create a Linux VM (running in VMware or VirtualBox) and install Docker inside there. (difficulty: easy)
+        2. Use [Docker Machine](http://docs.docker.oeynet.com/machine/install-machine/) instead of Docker Engine and launch the Docker Daemon inside a VMware/VirtualBox VM. This way your local `docker` command will connect to a _remote_ Docker Daemon (the thing that builds, manages, and runs Docker containers) running inside a conventional VM. This option is quite involved. Only recommended for users with a thorough understanding of the Docker ecosystem. (difficulty: hard)
+        3. Create a Ubuntu 20.04 LTS Linux VM (running in VMware or VirtualBox) and install ROS natively inside there. Check out the provided `Dockerfile` for required packages and use `rosdep` to install additional dependencies. (difficulty: medium)
 
 2. In vscode install the [Remote - Containers](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers) extension.
 
@@ -148,8 +31,8 @@ While less performant due to lack of hardware acceleration, the devcontainer may
     ```sh
     cd /workspace
     catkin_make
-    # where $SHELL should be either bash, zsh or sh
-    source "devel/setup.$(basename $SHELL)"
+    # NOTE: use setup.zsh when using zsh
+    source "devel/setup.bash"
     ```
 
 6. Launch the demo:
@@ -163,7 +46,7 @@ While less performant due to lack of hardware acceleration, the devcontainer may
 
 ## Contributors
 
-This project is a fork of [osrf/car_demo](https://github.com/osrf/car_demo) with its respective authors. The devcontainer environment is largely based on the template provided by [devrt/ros-devcontainer-vscode](https://github.com/devrt/ros-devcontainer-vscode). Light desktop environment script by [microsoft/vscode-dev-containers](https://github.com/microsoft/vscode-dev-containers).
+This project is a fork of [osrf/car_demo](https://github.com/osrf/car_demo) with its respective authors. Light desktop environment script by [microsoft/vscode-dev-containers](https://github.com/microsoft/vscode-dev-containers).
 
 Main contributors sorted by lastname:
 
@@ -173,4 +56,4 @@ Main contributors sorted by lastname:
 
 Under supervision by:
 
--   Thao Dang
+-   Prof. Thao Dang
