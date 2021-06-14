@@ -10,7 +10,7 @@ import std_msgs.msg
 import tf
 import numpy as np
 
-from geometry_msgs.msg import Point, Vector3
+from geometry_msgs.msg import Point, Vector3, Quaternion
 from std_msgs.msg import ColorRGBA
 from visualization_msgs.msg import Marker
 
@@ -159,12 +159,12 @@ class TrajectoryHandler:
 
 def create_debug_marker(id: int, x: float, y: float, size: float = 5) -> Marker:
     marker = Marker()
-    marker.header = std_msgs.msg.Header()
     marker.header.frame_id = "map"
     marker.id = id
     marker.action = Marker.ADD
     marker.type = Marker.CUBE
     marker.pose.position = Point(x=x, y=y)
+    marker.pose.orientation = Quaternion(x=0, y=0, z=0, w=1)
     marker.color = ColorRGBA(r=1, g=1, b=0, a=1)
     marker.scale = Vector3(x=size * 0.1, y=size * 0.1, z=size * 0.1)
     return marker
