@@ -103,7 +103,7 @@ def create_trajectory(
     Z = np.array([lane_coeff.W, lane_coeff.Y_offset, lane_coeff.dPhi, lane_coeff.c0])
 
     for i, u in enumerate(x):
-        u2 = u ** 2
+        u2 = u**2
         y[i] = np.dot(np.array([0, -1, -u, 0.5 * u2]), Z)
 
     tran_mat = tf_listener.asMatrix("map", lane_coeff.header)
