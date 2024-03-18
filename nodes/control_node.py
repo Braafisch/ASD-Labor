@@ -58,7 +58,7 @@ class TrajectoryHandler:
         dx_vec = fx - np.asarray(cx).reshape([-1, 1])
         dy_vec = fy - np.asarray(cy).reshape([-1, 1])
         dist = np.hstack([dx_vec, dy_vec])
-        dist_2 = np.sum(dist ** 2, axis=1)
+        dist_2 = np.sum(dist**2, axis=1)
         target_idx = np.argmin(dist_2)
 
         # Project RMS error onto front axle vector
